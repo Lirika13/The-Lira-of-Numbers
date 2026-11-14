@@ -1,0 +1,1547 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Магическая академия уравнений</title>
+
+<!-- ================================================================
+     ИНСТРУКЦИЯ ПО FIREBASE (10 шагов):
+     1) https://console.firebase.google.com → Add project
+     2) Build → Realtime Database → Create Database → Test mode
+     3) ⚙ Project settings → General → Your apps → </> (Web)
+     4) Скопируйте firebaseConfig
+     5) Вставьте его в const firebaseConfig = {...} ниже (замените PASTE_...)
+     6) Опубликуйте файл (GitHub Pages / Netlify / Vercel)
+     7) Откройте сайт, войдите как ученик — данные появятся в БД
+     8) Войдите как учитель: кнопка «🎓 Я учитель» или URL#teacher
+     9) Пароль по умолчанию: magic2026 (константа TEACHER_PASSWORD)
+     10) ПРАВИЛА БЕЗОПАСНОСТИ: тестовый режим открыт всем.
+         Для реального класса настройте Rules (пример в ответе выше).
+     ================================================================ -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  min-height:100vh;font-family:'Nunito',system-ui,sans-serif;color:#e9e4ff;
+  background:
+    radial-gradient(1100px 750px at 50% -12%, #4a2385 0%, rgba(74,35,133,0) 62%),
+    radial-gradient(900px 700px at 92% 12%, #123a5e 0%, rgba(18,58,94,0) 60%),
+    radial-gradient(800px 800px at 6% 85%, #3a0f52 0%, rgba(58,15,82,0) 60%),
+    linear-gradient(170deg, #12072b 0%, #1a0b3d 35%, #0d1030 70%, #05030f 100%);
+  background-attachment:fixed;overflow-x:hidden;padding-bottom:110px;
+}
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 6px 1px rgba(255,255,255,.85);animation:twinkle 3s infinite ease-in-out;opacity:.7}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+
+.screen{position:relative;z-index:2}
+.hidden{display:none !important}
+
+/* ============ LOGIN ============ */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{
+  max-width:460px;width:100%;
+  background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));
+  border:1.5px solid rgba(255,207,92,.4);border-radius:26px;
+  padding:34px 26px 26px;text-align:center;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 0 60px rgba(120,80,255,.28),0 20px 50px rgba(0,0,0,.5);
+  animation:cardIn .6s cubic-bezier(.22,1,.36,1);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+.login-card h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(21px,5vw,30px);margin:0 0 6px;
+  background:linear-gradient(100deg,#ffd76a,#fff3c4 35%,#ffcf5c 55%,#e0a3ff 80%,#2ee6d6);
+  -webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.2}
+.login-card .sub{color:#b9a9e8;font-weight:700;font-size:15px;margin:0 0 22px}
+#nickInput{
+  width:100%;padding:15px 16px;font-family:'Nunito',sans-serif;font-size:17px;font-weight:700;
+  color:#fff;background:rgba(10,6,28,.7);border:2px solid rgba(160,130,255,.5);
+  border-radius:16px;outline:none;transition:.22s;text-align:center;margin-bottom:14px;
+}
+#nickInput::placeholder{color:#6b5aa8}
+#nickInput:focus{border-color:#ffcf5c;box-shadow:0 0 0 4px rgba(255,207,92,.16),0 0 22px rgba(255,207,92,.3)}
+#loginBtn{width:100%;padding:15px;font-size:17px;margin-bottom:12px}
+.login-error{color:#ff9ec4;font-weight:800;font-size:13px;min-height:20px;margin-top:4px}
+.cloud-badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;
+  padding:5px 12px;border-radius:999px;margin:6px 0 14px}
+.cloud-badge.local{background:rgba(255,146,60,.13);color:#ffb877;border:1px solid rgba(255,146,60,.4)}
+.cloud-badge.cloud{background:rgba(46,230,214,.13);color:#7df3e8;border:1px solid rgba(46,230,214,.4)}
+
+/* ============ HEADER ============ */
+header{position:relative;z-index:2;text-align:center;padding:22px 16px 6px}
+.header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;max-width:880px;margin:0 auto 8px;padding:0 16px}
+.header-top h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(16px,3.2vw,26px);margin:0;letter-spacing:.02em;
+  background:linear-gradient(100deg,#ffd76a,#fff3c4 35%,#ffcf5c 55%,#e0a3ff 80%,#2ee6d6);
+  -webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.2}
+.user-info{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nick-badge{font-size:13px;font-weight:800;color:#ffe8b0;background:rgba(255,207,92,.13);
+  border:1px solid rgba(255,207,92,.4);padding:6px 12px;border-radius:12px;white-space:nowrap}
+.btn.tiny{padding:7px 14px;font-size:12px;border-radius:11px}
+.btn.small{padding:10px 16px;font-size:13px}
+
+.sub{color:#b9a9e8;font-size:clamp(13px,2.4vw,16px);margin:0 0 14px;font-weight:700;text-align:center}
+.levels{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:6px}
+.rune{font-family:'Nunito',sans-serif;font-weight:800;font-size:14px;padding:11px 18px;border-radius:14px;cursor:pointer;
+  color:#d8ccff;background:rgba(255,255,255,.05);border:1.5px solid rgba(160,130,255,.35);transition:.22s}
+.rune:hover{transform:translateY(-2px);border-color:rgba(255,207,92,.6);box-shadow:0 0 18px rgba(255,207,92,.28);color:#fff}
+.rune.active{background:linear-gradient(140deg,rgba(255,207,92,.22),rgba(46,230,214,.14));
+  border-color:#ffcf5c;color:#ffeab5;box-shadow:0 0 22px rgba(255,207,92,.4),inset 0 0 18px rgba(255,207,92,.12)}
+
+main{position:relative;z-index:2;max-width:880px;margin:0 auto;padding:14px 16px}
+
+/* ============ TRAINER CARD ============ */
+.scroll-card{position:relative;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
+  border:1.5px solid rgba(255,207,92,.36);border-radius:26px;padding:24px 20px 22px;
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  box-shadow:0 0 46px rgba(120,80,255,.22),0 18px 46px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.12)}
+.type-badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  padding:4px 12px;border-radius:999px;background:rgba(46,230,214,.13);color:#7df3e8;
+  border:1px solid rgba(46,230,214,.4);margin-bottom:8px}
+.eq{display:block;text-align:center;font-weight:900;font-size:clamp(26px,6vw,46px);line-height:1.5;
+  padding:28px 6px 14px;animation:orbFloat 4.6s ease-in-out infinite;
+  filter:drop-shadow(0 0 22px rgba(160,120,255,.4))}
+@keyframes orbFloat{0%,100%{transform:translateY(0) rotate(-.4deg)}50%{transform:translateY(-7px) rotate(.4deg)}}
+
+.tok{position:relative;display:inline-block;padding:3px 9px;border-radius:11px;margin:0 3px;vertical-align:middle;transition:.25s}
+.lbl{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  font-size:9.5px;font-weight:900;letter-spacing:.03em;text-transform:uppercase;
+  padding:2px 7px;border-radius:999px;white-space:nowrap;margin-bottom:3px;line-height:1.4;
+  box-shadow:0 3px 10px rgba(0,0,0,.35)}
+.gold{background:rgba(255,207,92,.15);box-shadow:inset 0 0 0 2px rgba(255,207,92,.8);color:#ffe8b0}
+.gold .lbl{background:#ffcf5c;color:#3a2a00}
+.orange{background:rgba(255,146,60,.15);box-shadow:inset 0 0 0 2px rgba(255,146,60,.8);color:#ffd3ab}
+.orange .lbl{background:#ff923c;color:#3a1c00}
+.blue{background:rgba(90,190,255,.15);box-shadow:inset 0 0 0 2px rgba(90,190,255,.8);color:#c3e9ff}
+.blue .lbl{background:#5abeff;color:#022a44}
+.purple{background:rgba(178,120,255,.17);box-shadow:inset 0 0 0 2px rgba(178,120,255,.82);color:#e3ccff}
+.purple .lbl{background:#b278ff;color:#23003f}
+.lime{background:rgba(166,255,77,.13);box-shadow:inset 0 0 0 2px rgba(166,255,77,.75);color:#e0ffb8}
+.lime .lbl{background:#a6ff4d;color:#123300}
+.skobka{border:2px dashed #2ee6d6;background:rgba(46,230,214,.09);border-radius:13px}
+.skobka .lbl{background:#2ee6d6;color:#00332f}
+.unknown{box-shadow:inset 0 0 0 2px #ff4fd8,0 0 18px rgba(255,79,216,.45);
+  background:rgba(255,79,216,.13);color:#ffd9f7;animation:pulseU 1.7s ease-in-out infinite}
+@keyframes pulseU{0%,100%{box-shadow:inset 0 0 0 2px #ff4fd8,0 0 10px rgba(255,79,216,.25)}
+  50%{box-shadow:inset 0 0 0 2px #ff8ce8,0 0 24px rgba(255,79,216,.75)}}
+
+.answer-row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:14px}
+.answer-row .xlbl{font-size:clamp(20px,4vw,28px);font-weight:900;color:#c9b8ff}
+#answerInput{width:130px;padding:12px 14px;font-family:'Nunito',sans-serif;font-size:22px;font-weight:900;
+  text-align:center;color:#fff;background:rgba(10,6,28,.66);border:2px solid rgba(160,130,255,.5);
+  border-radius:16px;outline:none;transition:.22s}
+#answerInput::placeholder{color:#6b5aa8}
+#answerInput:focus{border-color:#ffcf5c;box-shadow:0 0 0 4px rgba(255,207,92,.16),0 0 22px rgba(255,207,92,.3)}
+#answerInput:disabled{opacity:.4;cursor:not-allowed}
+#answerInput::-webkit-outer-spin-button,#answerInput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#answerInput[type=number]{-moz-appearance:textfield}
+#answerInput.shake{animation:shake .42s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}
+  40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+
+.btn{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;padding:13px 22px;border-radius:16px;
+  cursor:pointer;color:#e8dfff;background:rgba(255,255,255,.07);
+  border:1.5px solid rgba(160,130,255,.38);transition:.22s}
+.btn:hover:not(:disabled){transform:translateY(-2px);color:#fff;border-color:rgba(255,207,92,.65);box-shadow:0 0 22px rgba(255,207,92,.3)}
+.btn:active:not(:disabled){transform:translateY(0)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:linear-gradient(135deg,#ffcf5c,#ffa63c 55%,#ff7ad9);color:#2b1700;border:none;
+  box-shadow:0 0 26px rgba(255,175,60,.5),0 8px 20px rgba(0,0,0,.35)}
+.btn.primary:hover:not(:disabled){color:#2b1700;box-shadow:0 0 38px rgba(255,190,90,.8),0 10px 24px rgba(0,0,0,.4)}
+.btn.ghost{background:rgba(46,230,214,.09);border-color:rgba(46,230,214,.4);color:#8cf5ea}
+.btn.ghost:hover:not(:disabled){border-color:#2ee6d6;box-shadow:0 0 22px rgba(46,230,214,.4)}
+
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.feedback{text-align:center;font-weight:800;font-size:16px;margin-top:14px;min-height:24px;line-height:1.45;transition:.3s}
+.feedback.ok{color:#a6ff4d;text-shadow:0 0 18px rgba(166,255,77,.6)}
+.feedback.bad{color:#ff9ec4;text-shadow:0 0 16px rgba(255,79,150,.45)}
+
+/* ============ STEPS ============ */
+.steps-panel{margin-top:22px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+  border:1.5px solid rgba(46,230,214,.32);border-radius:24px;padding:20px 16px 18px;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:0 0 40px rgba(46,230,214,.13),0 16px 40px rgba(0,0,0,.4);transition:.35s}
+.steps-panel.hidden{display:none}
+.steps-panel h2{font-family:'Cinzel',serif;font-size:clamp(16px,3.2vw,21px);margin:0 0 16px;text-align:center;
+  color:#8cf5ea;letter-spacing:.04em;text-shadow:0 0 20px rgba(46,230,214,.45)}
+.warning-banner{background:rgba(255,146,60,.13);border:1.5px solid rgba(255,146,60,.5);
+  border-radius:14px;padding:12px 14px;margin-bottom:14px;color:#ffc79a;font-weight:800;font-size:14px;line-height:1.5;text-align:center}
+.step-card{background:rgba(12,7,32,.58);border:1.5px solid rgba(160,130,255,.28);border-radius:18px;
+  padding:14px 14px 12px;margin-bottom:12px;animation:stepIn .5s cubic-bezier(.22,1,.36,1) both;
+  box-shadow:0 6px 20px rgba(0,0,0,.3)}
+@keyframes stepIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.step-card.check{border-color:rgba(166,255,77,.55);background:rgba(30,60,10,.34);box-shadow:0 0 28px rgba(166,255,77,.22)}
+.stage{display:inline-block;font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+  color:#ffcf5c;background:rgba(255,207,92,.12);border:1px solid rgba(255,207,92,.4);
+  padding:3px 10px;border-radius:999px;margin-bottom:10px}
+.step-eq{text-align:center;font-weight:900;font-size:clamp(18px,3.8vw,27px);line-height:1.5;padding-top:26px}
+.rule{font-size:14.5px;font-weight:700;line-height:1.5;color:#c9bcef;text-align:center;margin-top:10px;padding:0 4px}
+.check-text{font-size:clamp(15px,3vw,19px);font-weight:900;color:#b7ff70;text-align:center;
+  line-height:1.5;text-shadow:0 0 16px rgba(166,255,77,.5)}
+.steps-footer{display:flex;justify-content:center;margin-top:18px}
+
+/* ============ FOOTER ============ */
+footer{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;justify-content:center;
+  align-items:center;flex-wrap:wrap;padding:11px 12px;
+  background:linear-gradient(0deg,rgba(5,3,15,.97),rgba(10,5,28,.85) 70%,rgba(10,5,28,0));
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(160,130,255,.2)}
+.stat{font-size:12.5px;font-weight:800;color:#a99bd6;background:rgba(255,255,255,.055);
+  border:1px solid rgba(160,130,255,.22);padding:6px 12px;border-radius:12px;white-space:nowrap}
+.stat b{color:#ffcf5c;font-size:14px}
+.crystal{display:flex;align-items:center;gap:8px}
+.crystal-bar{width:74px;height:9px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.11);
+  border:1px solid rgba(46,230,214,.35)}
+#crystalFill{height:100%;width:0%;border-radius:999px;
+  background:linear-gradient(90deg,#2ee6d6,#a6ff4d,#ffcf5c);box-shadow:0 0 12px rgba(46,230,214,.8);transition:width .5s ease}
+
+/* ============ TOAST & HINT ============ */
+.toast{position:fixed;left:50%;top:22%;transform:translate(-50%,-24px) scale(.9);z-index:80;pointer-events:none;
+  font-weight:900;font-size:clamp(16px,3.6vw,25px);padding:16px 28px;border-radius:20px;color:#2b1700;
+  background:linear-gradient(135deg,#ffe9a8,#ffcf5c 45%,#ff9ee0);
+  box-shadow:0 0 44px rgba(255,207,92,.75),0 14px 40px rgba(0,0,0,.45);
+  opacity:0;transition:.35s cubic-bezier(.22,1,.36,1);text-align:center;max-width:88vw}
+.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+
+.hint-banner{position:fixed;left:50%;top:30%;transform:translate(-50%,-20px);z-index:75;pointer-events:none;
+  max-width:min(520px,90vw);padding:18px 22px;border-radius:20px;
+  background:linear-gradient(135deg,#5abeff,#2ee6d6);color:#022a44;font-weight:800;font-size:15px;line-height:1.5;
+  box-shadow:0 0 44px rgba(46,230,214,.7),0 14px 40px rgba(0,0,0,.4);text-align:center;
+  opacity:0;transition:.3s}
+.hint-banner.show{opacity:1;transform:translate(-50%,0)}
+
+/* ============ TEACHER ============ */
+.teacher-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  background:rgba(255,255,255,.05);border:1.5px solid rgba(160,130,255,.25);
+  border-radius:18px;padding:14px;margin-bottom:18px}
+.teacher-toolbar input[type=text],.teacher-toolbar input:not([type]),.teacher-toolbar select{
+  padding:10px 14px;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;
+  color:#fff;background:rgba(10,6,28,.7);border:1.5px solid rgba(160,130,255,.4);
+  border-radius:12px;outline:none;transition:.22s;min-width:150px}
+.teacher-toolbar input:focus,.teacher-toolbar select:focus{border-color:#ffcf5c;box-shadow:0 0 0 3px rgba(255,207,92,.14)}
+.teacher-toolbar label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#c9bcef;cursor:pointer}
+.teacher-toolbar input[type=checkbox]{width:16px;height:16px;accent-color:#ffcf5c;cursor:pointer}
+.online-counter{font-size:12px;font-weight:800;color:#a6ff4d;background:rgba(166,255,77,.1);
+  border:1px solid rgba(166,255,77,.35);padding:6px 12px;border-radius:999px}
+.teacher-summary{display:flex;flex-direction:column;gap:10px}
+.student-card{background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+  border:1.5px solid rgba(160,130,255,.28);border-radius:18px;overflow:hidden;transition:.2s}
+.student-card:hover{border-color:rgba(255,207,92,.45);box-shadow:0 0 22px rgba(255,207,92,.14)}
+.student-row{display:grid;grid-template-columns:1.4fr repeat(6,1fr) 1.2fr;gap:8px;padding:14px 16px;
+  cursor:pointer;align-items:center;font-size:13px;font-weight:700}
+.student-row .nick{color:#ffe8b0;font-weight:900;font-size:15px}
+.student-row .val{color:#c9bcef;text-align:center;font-variant-numeric:tabular-nums}
+.student-row .acc{text-align:center;font-weight:900;font-variant-numeric:tabular-nums}
+.student-row .acc.low{color:#ff9ec4}
+.student-row .acc.mid{color:#ffcf5c}
+.student-row .acc.high{color:#a6ff4d}
+.student-row .ts{color:#8b7fbd;font-size:11px;text-align:right}
+.student-row .hdr{display:none}
+.student-detail{padding:0 16px 16px;border-top:1px solid rgba(160,130,255,.18);margin-top:-4px}
+.detail-section{margin-top:14px}
+.detail-section h4{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#ffcf5c;margin:0 0 8px}
+.attempt-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.attempt{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;border-radius:10px;
+  background:rgba(12,7,32,.5);font-size:12.5px;font-weight:700;border-left:3px solid #5abeff}
+.attempt.correct{border-left-color:#a6ff4d}
+.attempt.wrong{border-left-color:#ff9ec4}
+.attempt.hint{border-left-color:#ffcf5c}
+.attempt.solution{border-left-color:#b278ff}
+.attempt .eqn{color:#e8dfff;font-family:'Nunito';flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attempt .ans{color:#8b7fbd;font-size:11.5px}
+.attempt .time{color:#6b5aa8;font-size:11px;white-space:nowrap}
+.typical-errors{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.typ-err{background:rgba(255,146,60,.08);border:1px solid rgba(255,146,60,.3);
+  border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.4}
+.typ-err .tl{color:#ffc79a;font-weight:900;margin-bottom:4px;font-size:12px}
+.typ-err .td{color:#c9bcef}
+.csv-btn{margin-top:10px}
+
+/* ============ MODAL ============ */
+.modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
+  background:rgba(5,3,15,.85);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:20px}
+.modal-card{max-width:400px;width:100%;background:linear-gradient(160deg,rgba(30,20,60,.98),rgba(15,10,40,.98));
+  border:1.5px solid rgba(255,207,92,.5);border-radius:22px;padding:26px 22px 22px;text-align:center;
+  box-shadow:0 0 60px rgba(255,207,92,.3),0 20px 50px rgba(0,0,0,.6);
+  animation:cardIn .35s cubic-bezier(.22,1,.36,1)}
+.modal-card h2{font-family:'Cinzel',serif;font-size:19px;margin:0 0 14px;color:#ffcf5c}
+.modal-card input{width:100%;padding:13px 16px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;
+  color:#fff;background:rgba(10,6,28,.7);border:2px solid rgba(160,130,255,.5);
+  border-radius:14px;outline:none;text-align:center;margin-bottom:10px}
+.modal-card input:focus{border-color:#ffcf5c;box-shadow:0 0 0 4px rgba(255,207,92,.14)}
+.modal-actions{display:flex;gap:10px;justify-content:center;margin-top:14px}
+.modal-actions .btn{flex:1;padding:12px}
+
+@media(max-width:720px){
+  .student-row{grid-template-columns:1.4fr 1fr 1fr;gap:6px;font-size:12px}
+  .student-row .hdr-opt{display:none}
+  .teacher-toolbar{flex-direction:column;align-items:stretch}
+  .teacher-toolbar input,.teacher-toolbar select{width:100%}
+}
+@media(max-width:560px){
+  .scroll-card{padding:18px 12px 16px;border-radius:20px}
+  .btn{padding:12px 16px;font-size:14px}
+  .stat{font-size:11px;padding:5px 9px}
+  .lbl{font-size:8px;padding:1px 5px}
+  #answerInput{width:110px;font-size:20px}
+  .header-top{flex-direction:column;align-items:stretch}
+  .user-info{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<!-- ============================================================
+     LOGIN SCREEN
+     ============================================================ -->
+<div id="loginScreen" class="screen">
+  <div class="login-card">
+    <h1>Магическая академия уравнений</h1>
+    <p class="sub">✨ Вход в академию</p>
+    <input id="nickInput" type="text" placeholder="Введи своё имя (ник)" maxlength="20" autocomplete="off">
+    <button id="loginBtn" class="btn primary">✨ Войти в академию</button>
+    <div id="loginError" class="login-error"></div>
+    <div id="cloudBadge" class="cloud-badge local">⚠️ Облако не подключено · локальный режим</div>
+    <button id="teacherBtnLogin" class="btn ghost small">🎓 Я учитель</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     APP SCREEN (TRAINER)
+     ============================================================ -->
+<div id="appScreen" class="screen hidden">
+  <header>
+    <div class="header-top">
+      <h1>Магическая академия уравнений</h1>
+      <div class="user-info">
+        <span class="nick-badge">🧙 <span id="userNickLabel">—</span></span>
+        <button id="logoutBtn" class="btn tiny">Выйти</button>
+      </div>
+    </div>
+    <p class="sub">Реши уравнение — и заклинание сработает! 🪄</p>
+    <div class="levels">
+      <button class="rune active" data-level="easy">🟢 Ученик</button>
+      <button class="rune" data-level="medium">🟡 Подмастерье</button>
+      <button class="rune" data-level="hard">🔴 Архимаг</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="scroll-card">
+      <div class="type-badge" id="typeBadge">Уравнение</div>
+      <div class="eq" id="equation">…</div>
+
+      <div class="answer-row">
+        <span class="xlbl">x =</span>
+        <input id="answerInput" type="number" inputmode="numeric" placeholder="?" autocomplete="off">
+        <button id="checkBtn" class="btn primary">Проверить</button>
+      </div>
+
+      <div class="actions">
+        <button id="newBtn" class="btn">🎲 Новое уравнение</button>
+        <button id="hintBtn" class="btn ghost">💡 Подсказка</button>
+        <button id="solveBtn" class="btn ghost">🔍 Показать решение</button>
+      </div>
+
+      <div id="feedback" class="feedback"></div>
+    </section>
+
+    <section id="stepsPanel" class="steps-panel hidden">
+      <h2>📜 Пошаговый разбор</h2>
+      <div id="warningBanner" class="warning-banner hidden"></div>
+      <div id="stepsList"></div>
+      <div class="steps-footer" id="stepsFooter"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="stat">🔥 Серия: <b id="streak">0</b></div>
+    <div class="stat">🏅 Счёт: <b id="score">0</b></div>
+    <div class="stat">⭐ Рекорд: <b id="best">0</b></div>
+    <div class="stat crystal">⚡
+      <div class="crystal-bar"><div id="crystalFill"></div></div>
+      <span id="levelLabel">Ур. 1</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ============================================================
+     TEACHER SCREEN
+     ============================================================ -->
+<div id="teacherScreen" class="screen hidden">
+  <header>
+    <div class="header-top">
+      <h1>🎓 Панель учителя</h1>
+      <div class="user-info">
+        <span class="online-counter" id="onlineCounter">0 онлайн</span>
+        <button id="refreshTeacherBtn" class="btn tiny">🔄 Обновить</button>
+        <button id="closeTeacherBtn" class="btn tiny">← К тренажёру</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="teacher-toolbar">
+      <input id="teacherSearch" type="text" placeholder="🔎 Поиск по нику...">
+      <select id="teacherSort">
+        <option value="nick">По нику (А→Я)</option>
+        <option value="accuracy_asc">Точность ↑</option>
+        <option value="accuracy_desc">Точность ↓</option>
+        <option value="errors">Ошибок ↓</option>
+        <option value="activity">Активность ↓</option>
+      </select>
+      <label><input type="checkbox" id="lowAccuracyFilter"> Только &lt; 50%</label>
+      <button id="exportAllBtn" class="btn primary small">📊 CSV всей группы</button>
+      <button id="clearAllBtn" class="btn small">🗑 Очистить</button>
+    </div>
+    <div id="teacherSummary" class="teacher-summary">
+      <div style="text-align:center;color:#8b7fbd;padding:30px;font-weight:700">Загрузка данных…</div>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div id="passwordModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>🔒 Вход для учителя</h2>
+    <input type="password" id="passwordInput" placeholder="Пароль" autocomplete="off">
+    <div id="passwordError" class="login-error"></div>
+    <div class="modal-actions">
+      <button id="passwordCancel" class="btn">Отмена</button>
+      <button id="passwordSubmit" class="btn primary">Войти</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="hintBanner" class="hint-banner"></div>
+
+<script>
+/* ================================================================
+   0. КОНФИГ
+   ================================================================ */
+const TEACHER_PASSWORD = 'magic2026';
+
+// ⬇⬇⬇ ЗАМЕНИТЕ НА СВОИ ЗНАЧЕНИЯ ИЗ FIREBASE CONSOLE ⬇⬇⬇
+const firebaseConfig = {
+ apiKey: "AIzaSyBGh2kpBOAGsRLXR5Q9BrKS-D7h6MSJW1I",
+ authDomain: "the-lira-of-numbers.firebaseapp.com",
+ databaseURL: "https://the-lira-of-numbers-default-rtdb.europe-west1.firebasedatabase.app",
+ projectId: "the-lira-of-numbers",
+ storageBucket: "the-lira-of-numbers.firebasestorage.app",
+ messagingSenderId: "36953413924",
+ appId: "1:36953413924:web:a4cee66e51079ca04b3bb1"
+};
+// ⬆⬆⬆ Если оставить PASTE_... — сайт работает в локальном режиме (localStorage) ⬆⬆⬆
+
+const CFG_OK = firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('PASTE');
+
+/* ================================================================
+   1. STORE — абстракция Firebase / localStorage
+   ================================================================ */
+const Store = {
+  mode: 'local',
+  db: null,
+  async init(){
+    if (!CFG_OK) return false;
+    try {
+      firebase.initializeApp(firebaseConfig);
+      this.db = firebase.database();
+      this.mode = 'cloud';
+      return true;
+    } catch(e){
+      console.error('Firebase init failed:', e);
+      this.mode = 'local';
+      return false;
+    }
+  },
+  async nickExists(nick){
+    if (this.mode === 'cloud'){
+      const snap = await this.db.ref('users/' + nick).once('value');
+      return snap.exists();
+    }
+    const users = JSON.parse(localStorage.getItem('magic_users') || '[]');
+    return users.includes(nick);
+  },
+  async registerNick(nick){
+    if (this.mode === 'cloud'){
+      await this.db.ref('users/' + nick).set({ createdAt: Date.now() });
+    } else {
+      const users = JSON.parse(localStorage.getItem('magic_users') || '[]');
+      if (!users.includes(nick)){ users.push(nick); localStorage.setItem('magic_users', JSON.stringify(users)); }
+    }
+  },
+  async saveAttempt(a){
+    if (this.mode === 'cloud'){
+      await this.db.ref('attempts').push(a);
+    } else {
+      const arr = JSON.parse(localStorage.getItem('magic_attempts') || '[]');
+      a.id = 'loc_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      arr.push(a);
+      localStorage.setItem('magic_attempts', JSON.stringify(arr));
+    }
+  },
+  async getAllAttempts(){
+    if (this.mode === 'cloud'){
+      const snap = await this.db.ref('attempts').once('value');
+      const val = snap.val() || {};
+      return Object.entries(val).map(([id, a]) => ({ ...a, id }));
+    }
+    return JSON.parse(localStorage.getItem('magic_attempts') || '[]');
+  },
+  watchAttempts(cb){
+    if (this.mode === 'cloud'){
+      this.db.ref('attempts').on('value', snap => {
+        const val = snap.val() || {};
+        cb(Object.entries(val).map(([id, a]) => ({ ...a, id })));
+      });
+    } else {
+      cb(JSON.parse(localStorage.getItem('magic_attempts') || '[]'));
+    }
+  },
+  async setPresence(nick){
+    if (this.mode === 'cloud'){
+      const r = this.db.ref('presence/' + nick);
+      await r.set({ online: true, since: Date.now() });
+      r.onDisconnect().remove();
+    }
+  },
+  async removePresence(nick){
+    if (this.mode === 'cloud'){
+      try { await this.db.ref('presence/' + nick).remove(); } catch(e){}
+    }
+  },
+  watchPresence(cb){
+    if (this.mode === 'cloud'){
+      this.db.ref('presence').on('value', snap => cb(Object.keys(snap.val() || {})));
+    } else { cb([]); }
+  },
+  async clearAll(){
+    if (this.mode === 'cloud'){
+      await this.db.ref('attempts').remove();
+      await this.db.ref('users').remove();
+    } else {
+      localStorage.removeItem('magic_attempts');
+      localStorage.removeItem('magic_users');
+    }
+  }
+};
+
+/* ================================================================
+   2. ЗВЁЗДЫ
+   ================================================================ */
+(function makeStars(){
+  const box = document.getElementById('stars');
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < 110; i++){
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = 1 + Math.random()*2.6;
+    s.style.width = sz+'px'; s.style.height = sz+'px';
+    s.style.left = (Math.random()*100).toFixed(2)+'%';
+    s.style.top  = (Math.random()*100).toFixed(2)+'%';
+    s.style.animationDelay = (Math.random()*5).toFixed(2)+'s';
+    s.style.animationDuration = (2.2+Math.random()*3.4).toFixed(2)+'s';
+    if (Math.random() < 0.18) s.style.background = ['#ffcf5c','#2ee6d6','#ff4fd8','#a6ff4d'][Math.floor(Math.random()*4)];
+    frag.appendChild(s);
+  }
+  box.appendChild(frag);
+})();
+
+/* ================================================================
+   3. ГЕНЕРАТОР УРАВНЕНИЙ (сохранён из прошлой версии)
+   ================================================================ */
+const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const COLORS = {
+  'слагаемое':'gold','сумма':'orange','уменьшаемое':'blue','вычитаемое':'purple','разность':'lime',
+  'множитель':'gold','произведение':'orange','делимое':'blue','делитель':'purple','частное':'lime'
+};
+function T(txt,comp){
+  if (!comp) return `<span class="tok">${txt}</span>`;
+  return `<span class="tok ${COLORS[comp]||'gold'}"><span class="lbl">${comp}</span>${txt}</span>`;
+}
+function BR(inner,comp){
+  return `<span class="tok skobka ${comp?(COLORS[comp]||''):''}"><span class="lbl">${comp||'?'}</span>(${inner})</span>`;
+}
+const XU = `<span class="tok unknown">x</span>`;
+const GREEN = v => `<b style="color:#a6ff4d">${v}</b>`;
+function tryGen(fn,max){ for (let i=0;i<400;i++){ const r=fn(max); if(r) return r; } return null; }
+
+function innerSteps(pattern,p,k,xval){
+  const map = {
+    b_minus_x:{ html:`${T(p.b,'уменьшаемое')} − ${T('x','вычитаемое')} = ${T(k,'разность')}`,
+      rule:'Неизвестно <b>вычитаемое</b>. Чтобы найти вычитаемое, нужно из уменьшаемого вычесть разность.',
+      calc:`x = ${T(p.b,'уменьшаемое')} − ${T(k,'разность')}` },
+    b_plus_x:{ html:`${T(p.b,'слагаемое')} + ${T('x','слагаемое')} = ${T(k,'сумма')}`,
+      rule:'Неизвестно <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.',
+      calc:`x = ${T(k,'сумма')} − ${T(p.b,'слагаемое')}` },
+    x_minus_b:{ html:`${T('x','уменьшаемое')} − ${T(p.b,'вычитаемое')} = ${T(k,'разность')}`,
+      rule:'Неизвестно <b>уменьшаемое</b>. Чтобы найти уменьшаемое, нужно к разности прибавить вычитаемое.',
+      calc:`x = ${T(k,'разность')} + ${T(p.b,'вычитаемое')}` },
+    x_plus_b:{ html:`${T('x','слагаемое')} + ${T(p.b,'слагаемое')} = ${T(k,'сумма')}`,
+      rule:'Неизвестно <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.',
+      calc:`x = ${T(k,'сумма')} − ${T(p.b,'слагаемое')}` },
+    a_minus_x:{ html:`${T(p.a,'уменьшаемое')} − ${T('x','вычитаемое')} = ${T(k,'разность')}`,
+      rule:'Неизвестно <b>вычитаемое</b>. Чтобы найти вычитаемое, нужно из уменьшаемого вычесть разность.',
+      calc:`x = ${T(p.a,'уменьшаемое')} − ${T(k,'разность')}` },
+    a_plus_x:{ html:`${T(p.a,'слагаемое')} + ${T('x','слагаемое')} = ${T(k,'сумма')}`,
+      rule:'Неизвестно <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.',
+      calc:`x = ${T(k,'сумма')} − ${T(p.a,'слагаемое')}` }
+  };
+  const c = map[pattern];
+  return [
+    { stage:'Этап 2', html:c.html, rule:c.rule },
+    { html:c.calc, rule:'Подставляем числа.' },
+    { html:`x = ${GREEN(xval)}`, rule:'' }
+  ];
+}
+
+const TYPES = {
+  1:{ label:'Сложение · неизвестное слагаемое',
+    gen(max){ const x=rnd(1,max-1); if(max-x<1) return null; const a=rnd(1,max-x); return {x,a,b:x+a}; },
+    display:p=>`${XU} + ${p.a} = ${p.b}`,
+    check:p=>`${p.x} + ${p.a} = ${p.b}`,
+    steps:p=>[
+      { stage:'Шаг 1', html:`${T('x','слагаемое')} + ${T(p.a,'слагаемое')} = ${T(p.b,'сумма')}`,
+        rule:'Неизвестно <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.' },
+      { html:`x = ${T(p.b,'сумма')} − ${T(p.a,'слагаемое')}`, rule:'Из суммы вычитаем известное слагаемое.' },
+      { html:`x = ${GREEN(p.x)}`, rule:'' }
+    ]},
+  2:{ label:'Вычитание · неизвестное уменьшаемое',
+    gen(max){ const a=rnd(1,max-1); if(max-a<1) return null; const b=rnd(1,max-a); return {x:a+b,a,b}; },
+    display:p=>`${XU} − ${p.a} = ${p.b}`,
+    check:p=>`${p.x} − ${p.a} = ${p.b}`,
+    steps:p=>[
+      { stage:'Шаг 1', html:`${T('x','уменьшаемое')} − ${T(p.a,'вычитаемое')} = ${T(p.b,'разность')}`,
+        rule:'Неизвестно <b>уменьшаемое</b>. Чтобы найти уменьшаемое, нужно к разности прибавить вычитаемое.' },
+      { html:`x = ${T(p.b,'разность')} + ${T(p.a,'вычитаемое')}`, rule:'К разности прибавляем вычитаемое.' },
+      { html:`x = ${GREEN(p.x)}`, rule:'' }
+    ]},
+  3:{ label:'Вычитание · неизвестное вычитаемое',
+    gen(max){ const x=rnd(1,max-1); if(max-x<1) return null; const b=rnd(1,max-x); return {x,a:x+b,b}; },
+    display:p=>`${p.a} − ${XU} = ${p.b}`,
+    check:p=>`${p.a} − ${p.x} = ${p.b}`,
+    steps:p=>[
+      { stage:'Шаг 1', html:`${T(p.a,'уменьшаемое')} − ${T('x','вычитаемое')} = ${T(p.b,'разность')}`,
+        rule:'Неизвестно <b>вычитаемое</b>. Чтобы найти вычитаемое, нужно из уменьшаемого вычесть разность.' },
+      { html:`x = ${T(p.a,'уменьшаемое')} − ${T(p.b,'разность')}`, rule:'Из уменьшаемого вычитаем разность.' },
+      { html:`x = ${GREEN(p.x)}`, rule:'' }
+    ]},
+  4:{ label:'Умножение · неизвестный множитель',
+    gen(max){ const a=rnd(2,9), x=rnd(2,9); if(a*x>max) return null; return {x,a,b:a*x}; },
+    display:p=>`${p.a} · ${XU} = ${p.b}`,
+    check:p=>`${p.a} · ${p.x} = ${p.b}`,
+    steps:p=>[
+      { stage:'Шаг 1', html:`${T(p.a,'множитель')} · ${T('x','множитель')} = ${T(p.b,'произведение')}`,
+        rule:'Неизвестен <b>множитель</b>. Чтобы найти неизвестный множитель, нужно произведение разделить на известный множитель.' },
+      { html:`x = ${T(p.b,'произведение')} : ${T(p.a,'множитель')}`, rule:'Произведение делим на известный множитель.' },
+      { html:`x = ${GREEN(p.x)}`, rule:'' }
+    ]},
+  5:{ label:'Деление · неизвестное делимое',
+    gen(max){ const a=rnd(2,9), b=rnd(2,9); if(a*b>max) return null; return {x:a*b,a,b}; },
+    display:p=>`${XU} : ${p.a} = ${p.b}`,
+    check:p=>`${p.x} : ${p.a} = ${p.b}`,
+    steps:p=>[
+      { stage:'Шаг 1', html:`${T('x','делимое')} : ${T(p.a,'делитель')} = ${T(p.b,'частное')}`,
+        rule:'Неизвестно <b>делимое</b>. Чтобы найти делимое, нужно частное умножить на делитель.' },
+      { html:`x = ${T(p.b,'частное')} · ${T(p.a,'делитель')}`, rule:'Частное умножаем на делитель.' },
+      { html:`x = ${GREEN(p.x)}`, rule:'' }
+    ]},
+  6:{ label:'a + (b − x) = c',
+    gen(max){ const x=rnd(1,max-1); if(max-x<1) return null; const inner=rnd(1,max-x); const b=x+inner;
+      if(max-inner<1) return null; const a=rnd(1,max-inner); return {x,a,b,c:a+inner,inner}; },
+    display:p=>`${p.a} + (${p.b} − ${XU}) = ${p.c}`,
+    check:p=>`${p.a} + (${p.b} − ${p.x}) = ${p.a} + ${p.b-p.x} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${T(p.a,'слагаемое')} + ${BR(`${p.b} − x`,'слагаемое')} = ${T(p.c,'сумма')}`,
+        rule:'Скобка — это <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.' },
+      { html:`${BR(`${p.b} − x`,'слагаемое')} = ${T(p.c,'сумма')} − ${T(p.a,'слагаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`${p.b} − x = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('b_minus_x',{b:p.b},p.inner,p.x)
+    ]},
+  7:{ label:'a + (b + x) = c',
+    gen(max){ const x=rnd(1,max-1); if(max-x<2) return null; const b=rnd(1,max-x-1); const inner=b+x;
+      if(max-inner<1) return null; const a=rnd(1,max-inner); return {x,a,b,c:a+inner,inner}; },
+    display:p=>`${p.a} + (${p.b} + ${XU}) = ${p.c}`,
+    check:p=>`${p.a} + (${p.b} + ${p.x}) = ${p.a} + ${p.b+p.x} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${T(p.a,'слагаемое')} + ${BR(`${p.b} + x`,'слагаемое')} = ${T(p.c,'сумма')}`,
+        rule:'Скобка — это <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.' },
+      { html:`${BR(`${p.b} + x`,'слагаемое')} = ${T(p.c,'сумма')} − ${T(p.a,'слагаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`${p.b} + x = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('b_plus_x',{b:p.b},p.inner,p.x)
+    ]},
+  8:{ label:'a + (x − b) = c',
+    gen(max){ const b=rnd(1,max-1); if(max-b<1) return null; const inner=rnd(1,max-b); const x=b+inner;
+      if(max-inner<1) return null; const a=rnd(1,max-inner); return {x,a,b,c:a+inner,inner}; },
+    display:p=>`${p.a} + (${XU} − ${p.b}) = ${p.c}`,
+    check:p=>`${p.a} + (${p.x} − ${p.b}) = ${p.a} + ${p.x-p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${T(p.a,'слагаемое')} + ${BR(`x − ${p.b}`,'слагаемое')} = ${T(p.c,'сумма')}`,
+        rule:'Скобка — это <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.' },
+      { html:`${BR(`x − ${p.b}`,'слагаемое')} = ${T(p.c,'сумма')} − ${T(p.a,'слагаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`x − ${p.b} = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('x_minus_b',{b:p.b},p.inner,p.x)
+    ]},
+  9:{ label:'a − (b − x) = c',
+    gen(max){ const x=rnd(1,max-1); if(max-x<1) return null; const inner=rnd(1,max-x); const b=x+inner;
+      if(max-inner<1) return null; const c=rnd(1,max-inner); return {x,a:c+inner,b,c,inner}; },
+    display:p=>`${p.a} − (${p.b} − ${XU}) = ${p.c}`,
+    check:p=>`${p.a} − (${p.b} − ${p.x}) = ${p.a} − ${p.b-p.x} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${T(p.a,'уменьшаемое')} − ${BR(`${p.b} − x`,'вычитаемое')} = ${T(p.c,'разность')}`,
+        rule:'Скобка — это <b>вычитаемое</b>. Чтобы найти вычитаемое, нужно из уменьшаемого вычесть разность.' },
+      { html:`${BR(`${p.b} − x`,'вычитаемое')} = ${T(p.a,'уменьшаемое')} − ${T(p.c,'разность')}`, rule:'Вычисляем значение скобки.' },
+      { html:`${p.b} − x = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('b_minus_x',{b:p.b},p.inner,p.x)
+    ]},
+  10:{ label:'a − (b + x) = c',
+    gen(max){ const x=rnd(1,max-1); if(max-x<2) return null; const b=rnd(1,max-x-1); const inner=b+x;
+      if(max-inner<1) return null; const c=rnd(1,max-inner); return {x,a:c+inner,b,c,inner}; },
+    display:p=>`${p.a} − (${p.b} + ${XU}) = ${p.c}`,
+    check:p=>`${p.a} − (${p.b} + ${p.x}) = ${p.a} − ${p.b+p.x} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${T(p.a,'уменьшаемое')} − ${BR(`${p.b} + x`,'вычитаемое')} = ${T(p.c,'разность')}`,
+        rule:'Скобка — это <b>вычитаемое</b>. Чтобы найти вычитаемое, нужно из уменьшаемого вычесть разность.' },
+      { html:`${BR(`${p.b} + x`,'вычитаемое')} = ${T(p.a,'уменьшаемое')} − ${T(p.c,'разность')}`, rule:'Вычисляем значение скобки.' },
+      { html:`${p.b} + x = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('b_plus_x',{b:p.b},p.inner,p.x)
+    ]},
+  11:{ label:'a − (x − b) = c',
+    gen(max){ const b=rnd(1,max-1); if(max-b<1) return null; const inner=rnd(1,max-b); const x=b+inner;
+      if(max-inner<1) return null; const c=rnd(1,max-inner); return {x,a:c+inner,b,c,inner}; },
+    display:p=>`${p.a} − (${XU} − ${p.b}) = ${p.c}`,
+    check:p=>`${p.a} − (${p.x} − ${p.b}) = ${p.a} − ${p.x-p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${T(p.a,'уменьшаемое')} − ${BR(`x − ${p.b}`,'вычитаемое')} = ${T(p.c,'разность')}`,
+        rule:'Скобка — это <b>вычитаемое</b>. Чтобы найти вычитаемое, нужно из уменьшаемого вычесть разность.' },
+      { html:`${BR(`x − ${p.b}`,'вычитаемое')} = ${T(p.a,'уменьшаемое')} − ${T(p.c,'разность')}`, rule:'Вычисляем значение скобки.' },
+      { html:`x − ${p.b} = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('x_minus_b',{b:p.b},p.inner,p.x)
+    ]},
+  12:{ label:'(x + a) − b = c',
+    gen(max){ const a=rnd(1,max-1); if(max-a<1) return null; const x=rnd(1,max-a); const inner=x+a;
+      if(inner<2) return null; const b=rnd(1,inner-1); return {x,a,b,c:inner-b,inner}; },
+    display:p=>`(${XU} + ${p.a}) − ${p.b} = ${p.c}`,
+    check:p=>`(${p.x} + ${p.a}) − ${p.b} = ${p.x+p.a} − ${p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${BR(`x + ${p.a}`,'уменьшаемое')} − ${T(p.b,'вычитаемое')} = ${T(p.c,'разность')}`,
+        rule:'Скобка — это <b>уменьшаемое</b>. Чтобы найти уменьшаемое, нужно к разности прибавить вычитаемое.' },
+      { html:`${BR(`x + ${p.a}`,'уменьшаемое')} = ${T(p.c,'разность')} + ${T(p.b,'вычитаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`x + ${p.a} = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('x_plus_b',{b:p.a},p.inner,p.x)
+    ]},
+  13:{ label:'(x − a) + b = c',
+    gen(max){ const a=rnd(1,max-1); if(max-a<1) return null; const inner=rnd(1,max-a); const x=a+inner;
+      if(max-inner<1) return null; const b=rnd(1,max-inner); return {x,a,b,c:inner+b,inner}; },
+    display:p=>`(${XU} − ${p.a}) + ${p.b} = ${p.c}`,
+    check:p=>`(${p.x} − ${p.a}) + ${p.b} = ${p.x-p.a} + ${p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${BR(`x − ${p.a}`,'слагаемое')} + ${T(p.b,'слагаемое')} = ${T(p.c,'сумма')}`,
+        rule:'Скобка — это <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.' },
+      { html:`${BR(`x − ${p.a}`,'слагаемое')} = ${T(p.c,'сумма')} − ${T(p.b,'слагаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`x − ${p.a} = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('x_minus_b',{b:p.a},p.inner,p.x)
+    ]},
+  14:{ label:'(x − a) − b = c',
+    gen(max){ const a=rnd(1,max-1); if(max-a<1) return null; const inner=rnd(1,max-a); const x=a+inner;
+      if(inner<2) return null; const b=rnd(1,inner-1); return {x,a,b,c:inner-b,inner}; },
+    display:p=>`(${XU} − ${p.a}) − ${p.b} = ${p.c}`,
+    check:p=>`(${p.x} − ${p.a}) − ${p.b} = ${p.x-p.a} − ${p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${BR(`x − ${p.a}`,'уменьшаемое')} − ${T(p.b,'вычитаемое')} = ${T(p.c,'разность')}`,
+        rule:'Скобка — это <b>уменьшаемое</b>. Чтобы найти уменьшаемое, нужно к разности прибавить вычитаемое.' },
+      { html:`${BR(`x − ${p.a}`,'уменьшаемое')} = ${T(p.c,'разность')} + ${T(p.b,'вычитаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`x − ${p.a} = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('x_minus_b',{b:p.a},p.inner,p.x)
+    ]},
+  15:{ label:'(x + a) + b = c',
+    gen(max){ const x=rnd(1,max-1); if(max-x<1) return null; const a=rnd(1,max-x); const inner=x+a;
+      if(max-inner<1) return null; const b=rnd(1,max-inner); return {x,a,b,c:inner+b,inner}; },
+    display:p=>`(${XU} + ${p.a}) + ${p.b} = ${p.c}`,
+    check:p=>`(${p.x} + ${p.a}) + ${p.b} = ${p.x+p.a} + ${p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${BR(`x + ${p.a}`,'слагаемое')} + ${T(p.b,'слагаемое')} = ${T(p.c,'сумма')}`,
+        rule:'Скобка — это <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.' },
+      { html:`${BR(`x + ${p.a}`,'слагаемое')} = ${T(p.c,'сумма')} − ${T(p.b,'слагаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`x + ${p.a} = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('x_plus_b',{b:p.a},p.inner,p.x)
+    ]},
+  16:{ label:'(a − x) + b = c',
+    gen(max){ const x=rnd(1,max-1); if(max-x<1) return null; const inner=rnd(1,max-x); const a=x+inner;
+      if(max-inner<1) return null; const b=rnd(1,max-inner); return {x,a,b,c:inner+b,inner}; },
+    display:p=>`(${p.a} − ${XU}) + ${p.b} = ${p.c}`,
+    check:p=>`(${p.a} − ${p.x}) + ${p.b} = ${p.a-p.x} + ${p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${BR(`${p.a} − x`,'слагаемое')} + ${T(p.b,'слагаемое')} = ${T(p.c,'сумма')}`,
+        rule:'Скобка — это <b>слагаемое</b>. Чтобы найти неизвестное слагаемое, нужно из суммы вычесть известное слагаемое.' },
+      { html:`${BR(`${p.a} − x`,'слагаемое')} = ${T(p.c,'сумма')} − ${T(p.b,'слагаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`${p.a} − x = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('a_minus_x',{a:p.a},p.inner,p.x)
+    ]},
+  17:{ label:'(a − x) − b = c',
+    gen(max){ const x=rnd(1,max-1); if(max-x<1) return null; const inner=rnd(1,max-x); const a=x+inner;
+      if(inner<2) return null; const b=rnd(1,inner-1); return {x,a,b,c:inner-b,inner}; },
+    display:p=>`(${p.a} − ${XU}) − ${p.b} = ${p.c}`,
+    check:p=>`(${p.a} − ${p.x}) − ${p.b} = ${p.a-p.x} − ${p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${BR(`${p.a} − x`,'уменьшаемое')} − ${T(p.b,'вычитаемое')} = ${T(p.c,'разность')}`,
+        rule:'Скобка — это <b>уменьшаемое</b>. Чтобы найти уменьшаемое, нужно к разности прибавить вычитаемое.' },
+      { html:`${BR(`${p.a} − x`,'уменьшаемое')} = ${T(p.c,'разность')} + ${T(p.b,'вычитаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`${p.a} − x = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('a_minus_x',{a:p.a},p.inner,p.x)
+    ]},
+  18:{ label:'(a + x) − b = c',
+    gen(max){ const x=rnd(1,max-1); if(max-x<1) return null; const a=rnd(1,max-x); const inner=x+a;
+      if(inner<2) return null; const b=rnd(1,inner-1); return {x,a,b,c:inner-b,inner}; },
+    display:p=>`(${p.a} + ${XU}) − ${p.b} = ${p.c}`,
+    check:p=>`(${p.a} + ${p.x}) − ${p.b} = ${p.a+p.x} − ${p.b} = ${p.c}`,
+    steps:p=>[
+      { stage:'Этап 1', html:`${BR(`${p.a} + x`,'уменьшаемое')} − ${T(p.b,'вычитаемое')} = ${T(p.c,'разность')}`,
+        rule:'Скобка — это <b>уменьшаемое</b>. Чтобы найти уменьшаемое, нужно к разности прибавить вычитаемое.' },
+      { html:`${BR(`${p.a} + x`,'уменьшаемое')} = ${T(p.c,'разность')} + ${T(p.b,'вычитаемое')}`, rule:'Вычисляем значение скобки.' },
+      { html:`${p.a} + x = ${p.inner}`, rule:'Переходим к уравнению внутри скобки.' },
+      ...innerSteps('a_plus_x',{a:p.a},p.inner,p.x)
+    ]}
+};
+
+const LEVELS = {
+  easy:  { max:10,  types:[1,2,3,4,5,6,7,8,9,10,11] },
+  medium:{ max:20,  types:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] },
+  hard:  { max:100, types:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] }
+};
+
+/* ================================================================
+   4. ПОХВАЛА / ОШИБКИ / ПОДСКАЗКИ
+   ================================================================ */
+const PRAISE = [
+  'Молодец! ✨','Так держать, юный маг! 🌟','Великолепно! Твоя палочка светится! 🪄',
+  'Браво! Академия гордится тобой! 🏆','Идеально! Заклинание сработало! 🔮',
+  'Ты настоящий архимаг чисел! 🧙‍♂️','Блестяще! Ещё один кристалл в твою коллекцию! 💎',
+  'Вот это да! Умница! 👏','Точно в цель! Магия чисел тебе подвластна! ⚡',
+  'Превосходно! Свиток решён без единой ошибки! 📜','Ты растёшь как волшебник! 🚀',
+  'Фантастика! Так держать! 🌈','Верно! Звёзды аплодируют! ⭐',
+  'Умничка! Уравнение побеждено! 🛡️','Супер! Ты на верном магическом пути! 🗝️',
+  'Магия чисел слушается тебя! 🐉','Сова академии ухает от восторга! 🦉',
+  'Единорог гордится тобой! 🦄','Каждое верное решение делает тебя сильнее! 💫',
+  'Блеск! Ещё одна звезда в твоей короне! 👑'
+];
+const WRONG_MSG = [
+  'Почти получилось! Попробуй ещё раз ✨',
+  'Ещё чуть-чуть! Магия рядом 🪄',
+  'Не сдавайся, юный маг! Попробуй снова 🌙',
+  'Ошибка — тоже шаг к мастерству 🔮',
+  'Всё получится! Подумай ещё раз 🌟'
+];
+const HINTS = {
+  1:'x и число — слагаемые. Сумма = их результат. Найди x: из суммы вычти известное слагаемое.',
+  2:'x — уменьшаемое. Уменьшаемое = разность + вычитаемое.',
+  3:'x — вычитаемое. Вычитаемое = уменьшаемое − разность.',
+  4:'x — множитель. Множитель = произведение : известный множитель.',
+  5:'x — делимое. Делимое = частное · делитель.',
+  6:'Скобка — слагаемое. Найди её из суммы, потом реши x внутри.',
+  7:'Скобка — слагаемое. Найди её из суммы, потом реши x внутри.',
+  8:'Скобка — слагаемое. Найди её из суммы, потом реши x внутри.',
+  9:'Скобка — вычитаемое. Найди её, потом реши x внутри.',
+  10:'Скобка — вычитаемое. Найди её, потом реши x внутри.',
+  11:'Скобка — вычитаемое. Найди её, потом реши x внутри.',
+  12:'Скобка — уменьшаемое. Уменьшаемое = разность + вычитаемое. Потом реши x.',
+  13:'Скобка — слагаемое. Найди её из суммы. Потом реши x.',
+  14:'Скобка — уменьшаемое. Уменьшаемое = разность + вычитаемое. Потом реши x.',
+  15:'Скобка — слагаемое. Найди её из суммы. Потом реши x.',
+  16:'Скобка — слагаемое. Найди её из суммы. Потом реши x (вычитаемое).',
+  17:'Скобка — уменьшаемое. Найди её. Потом реши x (вычитаемое).',
+  18:'Скобка — уменьшаемое. Найди её. Потом реши x (слагаемое).'
+};
+
+/* ================================================================
+   5. СОСТОЯНИЕ
+   ================================================================ */
+const $ = id => document.getElementById(id);
+let current = null;
+let currentAttemptNum = 0;
+let wrongCount = 0;
+let streak = 0, score = 0;
+let totalCorrect = +(localStorage.getItem('magic_total') || 0);
+let best = +(localStorage.getItem('magic_best') || 0);
+let level = localStorage.getItem('magic_level') || 'easy';
+let studentNick = localStorage.getItem('magic_nick') || '';
+let teacherAuth = sessionStorage.getItem('magic_teacher_auth') === '1';
+
+const eqEl = $('equation'), badgeEl = $('typeBadge'), fbEl = $('feedback'),
+      inputEl = $('answerInput'), stepsPanel = $('stepsPanel'), stepsList = $('stepsList'),
+      warningBanner = $('warningBanner'), stepsFooter = $('stepsFooter');
+
+/* ================================================================
+   6. УТИЛИТЫ
+   ================================================================ */
+function showToast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 2100);
+}
+function showHintBanner(html){
+  const b = $('hintBanner');
+  b.innerHTML = html;
+  b.classList.add('show');
+}
+function hideHintBanner(){
+  $('hintBanner').classList.remove('show');
+}
+function burstConfetti(){
+  if (typeof confetti !== 'function') return;
+  const colors = ['#ffcf5c','#2ee6d6','#ff4fd8','#a6ff4d','#b278ff'];
+  confetti({ particleCount:90, spread:80, origin:{y:.65}, colors, scalar:1.1 });
+  setTimeout(() => confetti({ particleCount:60, spread:110, origin:{y:.55}, colors, scalar:.9 }), 220);
+}
+function magicSound(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC(), now = ctx.currentTime;
+    [660, 990].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      const t0 = now + i*0.12;
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(0.15, t0+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t0+0.28);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t0); o.stop(t0+0.32);
+    });
+    setTimeout(() => ctx.close(), 900);
+  } catch(e){}
+}
+function updateStats(){
+  $('streak').textContent = streak;
+  $('score').textContent = score;
+  $('best').textContent = best;
+  const inLevel = totalCorrect % 10;
+  $('crystalFill').style.width = (inLevel * 10) + '%';
+  $('levelLabel').textContent = 'Ур. ' + (Math.floor(totalCorrect/10)+1);
+}
+function guessComponent(){
+  const id = current.typeId;
+  if ([1,7,15,13].includes(id)) return 'слагаемое';
+  if ([2,8,12,14].includes(id)) return 'уменьшаемое';
+  if ([3,6,9,10,11,16,17].includes(id)) return 'вычитаемое';
+  if (id === 4) return 'множитель';
+  if (id === 5) return 'делимое';
+  return 'компонент';
+}
+
+/* ================================================================
+   7. ЛОГИРОВАНИЕ
+   ================================================================ */
+async function logAttempt(opts){
+  if (!studentNick || !current) return;
+  const rec = {
+    nick: studentNick,
+    timestamp: Date.now(),
+    equation: current.equationPlain,
+    type: 'type' + current.typeId,
+    typeLabel: current.t.label,
+    correct: !!opts.correct,
+    answer: opts.answer === undefined ? null : String(opts.answer),
+    correctAnswer: current.p.x,
+    hintUsed: !!opts.hintUsed,
+    solutionViewed: !!opts.solutionViewed,
+    attemptNum: currentAttemptNum,
+    level: level
+  };
+  try {
+    await Store.saveAttempt(rec);
+  } catch(e){
+    console.error('Log failed:', e);
+    // fallback — хотя бы в localStorage
+    try {
+      const arr = JSON.parse(localStorage.getItem('magic_attempts') || '[]');
+      rec.id = 'loc_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      arr.push(rec);
+      localStorage.setItem('magic_attempts', JSON.stringify(arr));
+    } catch(_){}
+  }
+}
+
+/* ================================================================
+   8. ГЕНЕРАЦИЯ УРАВНЕНИЙ
+   ================================================================ */
+function newEquation(typeId){
+  const cfg = LEVELS[level];
+  let tid = typeId;
+  if (tid === undefined || !cfg.types.includes(tid)){
+    tid = cfg.types[Math.floor(Math.random()*cfg.types.length)];
+  }
+  const t = TYPES[tid];
+  const p = tryGen(t.gen, cfg.max);
+  if (!p){ newEquation(); return; }
+
+  eqEl.innerHTML = t.display(p);
+  current = {
+    typeId: tid,
+    t,
+    p,
+    equationPlain: eqEl.textContent.replace(/\s+/g, ' ').trim(),
+    solved: false,
+    solutionViewed: false,
+    hintUsed: false
+  };
+  badgeEl.textContent = t.label;
+  fbEl.textContent = ''; fbEl.className = 'feedback';
+  inputEl.value = '';
+  inputEl.disabled = false;
+  $('checkBtn').disabled = false;
+  $('hintBtn').disabled = false;
+  $('solveBtn').disabled = false;
+  wrongCount = 0;
+  currentAttemptNum = 0;
+  stepsPanel.classList.add('hidden');
+  warningBanner.classList.add('hidden');
+  stepsList.innerHTML = '';
+  stepsFooter.innerHTML = '';
+  inputEl.focus();
+}
+
+/* ================================================================
+   9. ШАГИ
+   ================================================================ */
+function renderSteps(){
+  if (!current) return;
+  const steps = current.t.steps(current.p);
+  stepsList.innerHTML = '';
+  steps.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'step-card';
+    card.style.animationDelay = (i*0.14) + 's';
+    card.innerHTML = `
+      ${s.stage ? `<div class="stage">${s.stage}</div>` : ''}
+      <div class="step-eq">${s.html}</div>
+      ${s.rule ? `<div class="rule">${s.rule}</div>` : ''}`;
+    stepsList.appendChild(card);
+  });
+  const chk = document.createElement('div');
+  chk.className = 'step-card check';
+  chk.style.animationDelay = (steps.length*0.14) + 's';
+  chk.innerHTML = `<div class="check-text">✅ Проверка: ${current.t.check(current.p)} — верно!</div>`;
+  stepsList.appendChild(chk);
+
+  // кнопка в футере
+  stepsFooter.innerHTML = '';
+  if (current.solutionViewed){
+    const btn = document.createElement('button');
+    btn.className = 'btn primary';
+    btn.textContent = '✨ Решить новое похожее';
+    btn.onclick = () => { newEquation(current.typeId); };
+    stepsFooter.appendChild(btn);
+  } else {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.textContent = '🎲 Новое уравнение';
+    btn.onclick = () => { newEquation(); };
+    stepsFooter.appendChild(btn);
+  }
+
+  stepsPanel.classList.remove('hidden');
+  setTimeout(() => stepsPanel.scrollIntoView({behavior:'smooth', block:'nearest'}), 200);
+}
+
+/* ================================================================
+   10. ПРОВЕРКА ОТВЕТА
+   ================================================================ */
+async function checkAnswer(){
+  if (!current || current.solutionViewed) return;
+  const val = inputEl.value.trim();
+  if (val === ''){
+    fbEl.textContent = 'Введи число, юный маг ✨';
+    fbEl.className = 'feedback bad';
+    return;
+  }
+  const num = parseInt(val, 10);
+
+  if (num === current.p.x){
+    // ПРАВИЛЬНО
+    currentAttemptNum++;
+    streak++; score += 10; totalCorrect++;
+    if (streak > best){ best = streak; localStorage.setItem('magic_best', best); }
+    localStorage.setItem('magic_total', totalCorrect);
+    updateStats();
+
+    const praise = PRAISE[Math.floor(Math.random()*PRAISE.length)];
+    fbEl.textContent = praise;
+    fbEl.className = 'feedback ok';
+    showToast(praise);
+    burstConfetti();
+    magicSound();
+
+    await logAttempt({ correct: true, answer: num });
+
+    current.solved = true;
+    renderSteps();
+
+    // Автопереход через 5 секунд, если ученик сам не нажмёт кнопку
+    setTimeout(() => {
+      if (current && current.solved && !stepsFooter.querySelector('button')?.disabled){
+        // Кнопка в футере уже есть — ждём действия ученика
+      }
+    }, 5000);
+  } else {
+    // НЕПРАВИЛЬНО
+    currentAttemptNum++;
+    wrongCount++;
+    streak = 0;
+    updateStats();
+
+    fbEl.textContent = WRONG_MSG[Math.floor(Math.random()*WRONG_MSG.length)];
+    fbEl.className = 'feedback bad';
+    inputEl.classList.add('shake');
+    setTimeout(() => inputEl.classList.remove('shake'), 450);
+
+    await logAttempt({ correct: false, answer: num });
+
+    if (wrongCount === 1){
+      fbEl.textContent += '  Подсказка: неизвестное — это ' + guessComponent();
+    }
+    if (wrongCount >= 2){
+      fbEl.textContent += '  Смотри пошаговый разбор ниже 👇';
+      renderSteps();
+    }
+  }
+}
+
+/* ================================================================
+   11. ПОДСКАЗКА (короткая)
+   ================================================================ */
+async function useHint(){
+  if (!current || current.solutionViewed) return;
+  if (current.hintUsed) return; // одну подсказку на уравнение
+  current.hintUsed = true;
+  currentAttemptNum++;
+
+  await logAttempt({ correct: false, hintUsed: true });
+
+  $('hintBtn').disabled = true;
+  $('checkBtn').disabled = true;
+  $('solveBtn').disabled = true;
+
+  showHintBanner('💡 ' + (HINTS[current.typeId] || 'Вспомни правило.') + '<br><small style="opacity:.85">Сейчас появится новое уравнение того же типа 🪄</small>');
+
+  const savedType = current.typeId;
+  setTimeout(() => {
+    hideHintBanner();
+    newEquation(savedType);
+  }, 3000);
+}
+
+/* ================================================================
+   12. ПОКАЗ РЕШЕНИЯ
+   ================================================================ */
+async function showSolution(){
+  if (!current || current.solutionViewed) return;
+  current.solutionViewed = true;
+  currentAttemptNum++;
+
+  await logAttempt({ correct: false, solutionViewed: true });
+
+  inputEl.disabled = true;
+  $('checkBtn').disabled = true;
+  $('hintBtn').disabled = true;
+  $('solveBtn').disabled = true;
+
+  warningBanner.innerHTML = '⚠️ Ты посмотрел(а) подсказку. Это уравнение засчитано как учебное — сейчас появится новое, чтобы ты применил(а) правило сам(а) 🪄';
+  warningBanner.classList.remove('hidden');
+
+  fbEl.textContent = '';
+  fbEl.className = 'feedback';
+
+  renderSteps();
+}
+
+/* ================================================================
+   13. ЭКРАНЫ
+   ================================================================ */
+function showLoginScreen(){
+  $('loginScreen').classList.remove('hidden');
+  $('appScreen').classList.add('hidden');
+  $('teacherScreen').classList.add('hidden');
+  if (studentNick){
+    $('nickInput').value = studentNick;
+    $('loginError').textContent = '';
+  }
+}
+function showAppScreen(){
+  $('loginScreen').classList.add('hidden');
+  $('appScreen').classList.remove('hidden');
+  $('teacherScreen').classList.add('hidden');
+  $('userNickLabel').textContent = studentNick;
+  updateStats();
+  newEquation();
+}
+function showTeacherScreen(){
+  $('loginScreen').classList.add('hidden');
+  $('appScreen').classList.add('hidden');
+  $('teacherScreen').classList.remove('hidden');
+  loadTeacherData();
+}
+
+/* ================================================================
+   14. АВТОРИЗАЦИЯ УЧЕНИКА
+   ================================================================ */
+async function doLogin(){
+  const raw = $('nickInput').value.trim();
+  $('loginError').textContent = '';
+
+  if (!/^[А-Яа-яA-Za-z0-9_ ]{2,20}$/.test(raw)){
+    $('loginError').textContent = 'Ник: 2–20 символов, только буквы, цифры, пробел и _';
+    return;
+  }
+  const nick = raw.replace(/\s+/g, ' ').trim();
+
+  try {
+    if (await Store.nickExists(nick)){
+      // Если это тот же ученик с того же устройства — пускаем
+      if (localStorage.getItem('magic_nick') !== nick){
+        $('loginError').textContent = 'Такое имя уже занято, выбери другое';
+        return;
+      }
+    } else {
+      await Store.registerNick(nick);
+    }
+  } catch(e){
+    console.error(e);
+    $('loginError').textContent = 'Не удалось проверить ник. Работаем локально.';
+  }
+
+  studentNick = nick;
+  localStorage.setItem('magic_nick', nick);
+  localStorage.setItem('magic_level', level);
+  try { await Store.setPresence(nick); } catch(e){}
+  showAppScreen();
+}
+
+async function doLogout(){
+  if (studentNick){
+    try { await Store.removePresence(studentNick); } catch(e){}
+  }
+  // Не удаляем ник из localStorage — при следующем входе подставится
+  showLoginScreen();
+}
+
+/* ================================================================
+   15. ПАРОЛЬ УЧИТЕЛЯ
+   ================================================================ */
+function openPasswordModal(){
+  if (teacherAuth){
+    showTeacherScreen();
+    return;
+  }
+  $('passwordModal').classList.remove('hidden');
+  $('passwordInput').value = '';
+  $('passwordError').textContent = '';
+  setTimeout(() => $('passwordInput').focus(), 100);
+}
+function closePasswordModal(){ $('passwordModal').classList.add('hidden'); }
+function submitPassword(){
+  const val = $('passwordInput').value;
+  if (val === TEACHER_PASSWORD){
+    teacherAuth = true;
+    sessionStorage.setItem('magic_teacher_auth', '1');
+    closePasswordModal();
+    showTeacherScreen();
+  } else {
+    $('passwordError').textContent = 'Неверный пароль';
+  }
+}
+
+/* ================================================================
+   16. ПАНЕЛЬ УЧИТЕЛЯ
+   ================================================================ */
+let teacherAttempts = [];
+let teacherOnline = [];
+let expandedNicks = new Set();
+
+function computeSummary(attempts){
+  const byNick = {};
+  attempts.forEach(a => {
+    if (!a.nick) return;
+    if (!byNick[a.nick]){
+      byNick[a.nick] = {
+        nick: a.nick, total:0, correct:0, wrong:0, hints:0, solutions:0, lastActivity:0, attempts: []
+      };
+    }
+    const s = byNick[a.nick];
+    s.total++;
+    if (a.correct) s.correct++;
+    else if (a.hintUsed) s.hints++;
+    else if (a.solutionViewed) s.solutions++;
+    else s.wrong++;
+    s.lastActivity = Math.max(s.lastActivity, a.timestamp || 0);
+    s.attempts.push(a);
+  });
+  return Object.values(byNick).map(s => {
+    const denom = s.correct + s.wrong;
+    s.accuracy = denom ? Math.round(s.correct / denom * 100) : 0;
+    return s;
+  });
+}
+
+function computeTypicalErrors(attempts){
+  const byType = {};
+  attempts.forEach(a => {
+    if (a.correct || a.hintUsed || a.solutionViewed) return;
+    if (!byType[a.type]) byType[a.type] = { label: a.typeLabel || a.type, wrong: 0, wrongAnswers: {} };
+    byType[a.type].wrong++;
+    if (a.answer) {
+      const key = String(a.answer);
+      byType[a.type].wrongAnswers[key] = (byType[a.type].wrongAnswers[key] || 0) + 1;
+    }
+  });
+  return byType;
+}
+
+function fmtTime(ts){
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderTeacherData(){
+  const search = ($('teacherSearch').value || '').toLowerCase().trim();
+  const sort = $('teacherSort').value;
+  const lowOnly = $('lowAccuracyFilter').checked;
+
+  let summary = computeSummary(teacherAttempts);
+  if (search) summary = summary.filter(s => s.nick.toLowerCase().includes(search));
+  if (lowOnly) summary = summary.filter(s => s.accuracy < 50);
+
+  summary.sort((a, b) => {
+    if (sort === 'nick') return a.nick.localeCompare(b.nick, 'ru');
+    if (sort === 'accuracy_asc') return a.accuracy - b.accuracy;
+    if (sort === 'accuracy_desc') return b.accuracy - a.accuracy;
+    if (sort === 'errors') return b.wrong - a.wrong;
+    if (sort === 'activity') return b.lastActivity - a.lastActivity;
+    return 0;
+  });
+
+  const box = $('teacherSummary');
+  if (!summary.length){
+    box.innerHTML = '<div style="text-align:center;color:#8b7fbd;padding:30px;font-weight:700">Пока нет данных' +
+      (search ? ' по запросу «' + search + '»' : '') + '</div>';
+    return;
+  }
+
+  box.innerHTML = summary.map(s => {
+    const isExpanded = expandedNicks.has(s.nick);
+    const accClass = s.accuracy < 50 ? 'low' : s.accuracy < 80 ? 'mid' : 'high';
+        const sortedAttempts = [...s.attempts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 20);
+    const typical = computeTypicalErrors(s.attempts);
+    const typEntries = Object.values(typical);
+
+    return `
+      <div class="student-card">
+        <div class="student-row" data-nick="${s.nick}">
+          <div class="nick">🧙 ${s.nick}</div>
+          <div class="val">${s.total}</div>
+          <div class="val">${s.correct}</div>
+          <div class="val">${s.wrong}</div>
+          <div class="val">${s.hints}</div>
+          <div class="val">${s.solutions}</div>
+          <div class="acc ${accClass}">${s.accuracy}%</div>
+          <div class="ts">${fmtTime(s.lastActivity)}</div>
+        </div>
+        <div class="student-detail ${isExpanded ? '' : 'hidden'}">
+          <div class="detail-section">
+            <h4>📝 Последние попытки</h4>
+            <div class="attempt-list">
+              ${sortedAttempts.map(a => {
+                let cls = 'attempt';
+                if (a.correct) cls += ' correct';
+                else if (a.hintUsed) cls += ' hint';
+                else if (a.solutionViewed) cls += ' solution';
+                else cls += ' wrong';
+                const ansLabel = a.correct
+                  ? '✓ ' + a.answer
+                  : a.hintUsed
+                    ? '💡 подсказка'
+                    : a.solutionViewed
+                      ? '🔍 решение'
+                      : '✗ ' + (a.answer || '?');
+                return `<div class="${cls}">
+                  <div class="eqn">${a.equation || '—'}</div>
+                  <div class="ans">${ansLabel}</div>
+                  <div class="time">${fmtTime(a.timestamp)}</div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+          ${typEntries.length ? `
+            <div class="detail-section">
+              <h4>🎯 Типовые ошибки по типам</h4>
+              <div class="typical-errors">
+                ${typEntries.map(t => `
+                  <div class="typ-err">
+                    <div class="tl">${t.label}</div>
+                    <div class="td">${t.wrong} ошиб. · частые ответы: ${
+                      Object.entries(t.wrongAnswers).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([v,c])=>`${v}×${c}`).join(', ') || '—'
+                    }</div>
+                  </div>`).join('')}
+              </div>
+            </div>` : ''}
+          <button class="btn ghost small csv-btn" data-export="${s.nick}">📄 Экспорт CSV (${s.nick})</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Навешиваем обработчики
+  box.querySelectorAll('.student-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const nick = row.dataset.nick;
+      if (expandedNicks.has(nick)) expandedNicks.delete(nick);
+      else expandedNicks.add(nick);
+      renderTeacherData();
+    });
+  });
+  box.querySelectorAll('[data-export]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportCSV(teacherAttempts.filter(a => a.nick === btn.dataset.export), 'student_' + btn.dataset.export);
+    });
+  });
+}
+
+function exportCSV(attempts, filename){
+  if (!attempts.length){ showToast('Нет данных для экспорта'); return; }
+  const headers = ['nick','timestamp','equation','type','typeLabel','correct','answer','correctAnswer','hintUsed','solutionViewed','attemptNum','level'];
+  const rows = [headers.join(';')];
+  attempts.forEach(a => {
+    rows.push(headers.map(h => {
+      let v = a[h] === undefined || a[h] === null ? '' : a[h];
+      if (h === 'timestamp' && v) v = new Date(v).toLocaleString('ru-RU');
+      return '"' + String(v).replace(/"/g, '""') + '"';
+    }).join(';'));
+  });
+  const csv = '\uFEFF' + rows.join('\n'); // BOM для Excel
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV скачан ✓');
+}
+
+function loadTeacherData(){
+  $('onlineCounter').textContent = teacherOnline.length + ' онлайн';
+  if (Store.mode === 'cloud'){
+    Store.watchAttempts(atts => { teacherAttempts = atts; renderTeacherData(); });
+    Store.watchPresence(online => { teacherOnline = online; $('onlineCounter').textContent = online.length + ' онлайн'; });
+  } else {
+    teacherAttempts = JSON.parse(localStorage.getItem('magic_attempts') || '[]');
+    renderTeacherData();
+  }
+}
+
+async function doRefreshTeacher(){
+  try {
+    teacherAttempts = await Store.getAllAttempts();
+    renderTeacherData();
+    showToast('Обновлено ✓');
+  } catch(e){ showToast('Ошибка обновления'); }
+}
+
+async function doClearAll(){
+  if (!confirm('Очистить ВСЕ данные группы? Это действие необратимо.')) return;
+  try {
+    await Store.clearAll();
+    teacherAttempts = [];
+    renderTeacherData();
+    showToast('Данные очищены');
+  } catch(e){ showToast('Ошибка очистки'); }
+}
+
+/* ================================================================
+   17. СОБЫТИЯ
+   ================================================================ */
+$('loginBtn').addEventListener('click', doLogin);
+$('nickInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('logoutBtn').addEventListener('click', doLogout);
+$('teacherBtnLogin').addEventListener('click', openPasswordModal);
+
+$('passwordCancel').addEventListener('click', closePasswordModal);
+$('passwordSubmit').addEventListener('click', submitPassword);
+$('passwordInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitPassword(); });
+$('passwordModal').addEventListener('click', e => { if (e.target.id === 'passwordModal') closePasswordModal(); });
+
+$('closeTeacherBtn').addEventListener('click', () => { if (studentNick) showAppScreen(); else showLoginScreen(); });
+$('refreshTeacherBtn').addEventListener('click', doRefreshTeacher);
+$('exportAllBtn').addEventListener('click', () => exportCSV(teacherAttempts, 'group_all'));
+$('clearAllBtn').addEventListener('click', doClearAll);
+$('teacherSearch').addEventListener('input', renderTeacherData);
+$('teacherSort').addEventListener('change', renderTeacherData);
+$('lowAccuracyFilter').addEventListener('change', renderTeacherData);
+
+$('checkBtn').addEventListener('click', checkAnswer);
+inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); });
+$('newBtn').addEventListener('click', () => newEquation());
+$('hintBtn').addEventListener('click', useHint);
+$('solveBtn').addEventListener('click', showSolution);
+
+document.querySelectorAll('.rune').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.rune').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    level = btn.dataset.level;
+    localStorage.setItem('magic_level', level);
+    newEquation();
+  });
+});
+// Восстановить активный уровень
+document.querySelectorAll('.rune').forEach(b => {
+  if (b.dataset.level === level) b.classList.add('active');
+  else b.classList.remove('active');
+});
+
+// Поддержка #teacher в URL
+function checkHash(){
+  if (location.hash === '#teacher') openPasswordModal();
+}
+window.addEventListener('hashchange', checkHash);
+
+/* ================================================================
+   18. СТАРТ
+   ================================================================ */
+(async function init(){
+  const cloudOk = await Store.init();
+  const badge = $('cloudBadge');
+  if (cloudOk){
+    badge.className = 'cloud-badge cloud';
+    badge.textContent = '☁️ Облако подключено · результаты видны учителю';
+  } else {
+    badge.className = 'cloud-badge local';
+    badge.textContent = '⚠️ Облако не подключено · локальный режим (только это устройство)';
+  }
+
+  updateStats();
+
+  if (studentNick){
+    try { await Store.setPresence(studentNick); } catch(e){}
+    showAppScreen();
+  } else {
+    showLoginScreen();
+  }
+
+  checkHash();
+})();
+</script>
+</body>
+</html>
