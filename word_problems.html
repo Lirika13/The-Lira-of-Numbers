@@ -1,0 +1,680 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Зал Решения Задач — Магическая академия</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+/* ============ БАЗА ============ */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  min-height:100vh;font-family:'Nunito',system-ui,sans-serif;color:#e9e4ff;
+  background:
+    radial-gradient(1100px 750px at 50% -12%, #4a2385 0%, rgba(74,35,133,0) 62%),
+    radial-gradient(900px 700px at 92% 12%, #123a5e 0%, rgba(18,58,94,0) 60%),
+    radial-gradient(800px 800px at 6% 85%, #3a0f52 0%, rgba(58,15,82,0) 60%),
+    linear-gradient(170deg, #12072b 0%, #1a0b3d 35%, #0d1030 70%, #05030f 100%);
+  background-attachment:fixed;overflow-x:hidden;padding-bottom:110px;
+}
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 6px 1px rgba(255,255,255,.85);animation:twinkle 3s infinite ease-in-out;opacity:.7}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+
+.screen{position:relative;z-index:2}
+.hidden{display:none !important}
+
+/* ============ ШАПКА ============ */
+header{position:relative;z-index:2;text-align:center;padding:22px 16px 6px}
+.header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;max-width:880px;margin:0 auto 8px;padding:0 16px}
+.header-top h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(16px,3.2vw,26px);margin:0;letter-spacing:.02em;
+  background:linear-gradient(100deg,#ffd76a,#fff3c4 35%,#ffcf5c 55%,#e0a3ff 80%,#2ee6d6);
+  -webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.2}
+.user-info{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nick-badge{font-size:13px;font-weight:800;color:#ffe8b0;background:rgba(255,207,92,.13);
+  border:1px solid rgba(255,207,92,.4);padding:6px 12px;border-radius:12px;white-space:nowrap}
+.btn.tiny{padding:7px 14px;font-size:12px;border-radius:11px;text-decoration:none;display:inline-block}
+.btn.back-btn{background:rgba(255,255,255,.07);border:1.5px solid rgba(160,130,255,.38);color:#e8dfff;cursor:pointer;font-family:'Nunito';font-weight:900}
+.btn.back-btn:hover{border-color:#ffcf5c;color:#fff;box-shadow:0 0 15px rgba(255,207,92,.3)}
+
+/* ============ МЕНЮ ВЫБОРА ============ */
+#menuScreen{max-width:880px;margin:0 auto;padding:20px 16px;animation:cardIn .5s ease}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:20px}
+.menu-card{background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.02));
+  border:1.5px solid rgba(160,130,255,.3);border-radius:20px;padding:24px 20px;cursor:pointer;
+  transition:.25s;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.menu-card:hover{transform:translateY(-5px);border-color:#ffcf5c;box-shadow:0 12px 30px rgba(255,207,92,.2)}
+.menu-card .icon{font-size:36px;margin-bottom:10px;filter:drop-shadow(0 0 10px rgba(255,255,255,.4))}
+.menu-card h3{font-family:'Cinzel',serif;font-size:18px;margin:0 0 6px;color:#ffe8b0}
+.menu-card p{font-size:13px;color:#b9a9e8;margin:0;font-weight:700;line-height:1.4}
+
+/* ============ КАРТОЧКА ЗАДАНИЯ ============ */
+main{position:relative;z-index:2;max-width:880px;margin:0 auto;padding:0 16px}
+.scroll-card{position:relative;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
+  border:1.5px solid rgba(255,207,92,.36);border-radius:26px;padding:24px 20px 22px;
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  box-shadow:0 0 46px rgba(120,80,255,.22),0 18px 46px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.12);
+  animation:cardIn .4s cubic-bezier(.22,1,.36,1)}
+@keyframes cardIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.task-text{display:block;text-align:left;font-weight:700;font-size:clamp(16px,3.5vw,20px);line-height:1.6;
+  padding:14px 16px;background:rgba(0,0,0,0.2);border-radius:16px;border-left:4px solid #2ee6d6; margin-bottom:20px;}
+.task-text b {color:#ffcf5c;}
+
+/* ============ БЛОК УРАВНЕНИЯ (СТУПЕНЧАТЫЙ) ============ */
+.equation-builder { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+.step-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 16px; font-weight: 800; color: #c9bcef; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid rgba(160,130,255,0.15); }
+.step-line span { white-space: nowrap; }
+.input-text { flex: 1; min-width: 150px; padding: 10px 14px; font-family:'Nunito'; font-size:16px; font-weight:800; color:#fff; background:rgba(10,6,28,0.8); border:2px solid rgba(160,130,255,0.4); border-radius:10px; outline:none; transition:0.2s; }
+.input-text:focus { border-color: #ffcf5c; box-shadow: 0 0 10px rgba(255,207,92,0.3); }
+.input-eq { width: 100%; padding: 14px; font-family:'Nunito'; font-size:20px; font-weight:900; text-align:center; color:#ffcf5c; background:rgba(10,6,28,0.8); border:2px solid #ffcf5c; border-radius:12px; outline:none; box-shadow: inset 0 0 15px rgba(255,207,92,0.1); }
+.input-eq:focus { box-shadow: inset 0 0 15px rgba(255,207,92,0.3), 0 0 15px rgba(255,207,92,0.2); }
+.hint-text { font-size: 12px; color: #8b7fbd; margin-top: 5px; text-align: left; padding-left: 5px; }
+.final-answer-row { display:flex; align-items:center; gap:12px; justify-content:center; margin-top:20px; font-size:18px; font-weight:900; color:#a6ff4d; }
+.final-answer-row input { width:100px; padding:10px; font-family:'Nunito'; font-size:20px; font-weight:900; text-align:center; color:#fff; background:rgba(10,6,28,0.8); border:2px solid rgba(166,255,77,0.5); border-radius:12px; outline:none; }
+
+input.shake{animation:shake .42s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}
+  40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+
+/* ============ КНОПКИ ============ */
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.btn{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;padding:13px 22px;border-radius:16px;
+  cursor:pointer;color:#e8dfff;background:rgba(255,255,255,.07);
+  border:1.5px solid rgba(160,130,255,.38);transition:.22s}
+.btn:hover:not(:disabled){transform:translateY(-2px);color:#fff;border-color:rgba(255,207,92,.65);box-shadow:0 0 22px rgba(255,207,92,.3)}
+.btn.primary{background:linear-gradient(135deg,#ffcf5c,#ffa63c 55%,#ff7ad9);color:#2b1700;border:none;
+  box-shadow:0 0 26px rgba(255,175,60,.5),0 8px 20px rgba(0,0,0,.35)}
+.btn.primary:hover:not(:disabled){color:#2b1700;box-shadow:0 0 38px rgba(255,190,90,.8),0 10px 24px rgba(0,0,0,.4)}
+.btn.ghost{background:rgba(46,230,214,.09);border-color:rgba(46,230,214,.4);color:#8cf5ea}
+.btn.ghost:hover:not(:disabled){border-color:#2ee6d6;box-shadow:0 0 22px rgba(46,230,214,.4)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+.feedback{text-align:center;font-weight:800;font-size:16px;margin-top:14px;min-height:24px;line-height:1.45;transition:.3s}
+.feedback.ok{color:#a6ff4d;text-shadow:0 0 18px rgba(166,255,77,.6)}
+.feedback.bad{color:#ff9ec4;text-shadow:0 0 18px rgba(255,79,150,.45)}
+
+/* ============ РАЗБОР ============ */
+.steps-panel{margin-top:22px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+  border:1.5px solid rgba(46,230,214,.32);border-radius:24px;padding:20px 16px 18px;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:0 0 40px rgba(46,230,214,.13),0 16px 40px rgba(0,0,0,.4);transition:.35s}
+.steps-panel h2{font-family:'Cinzel',serif;font-size:clamp(16px,3.2vw,21px);margin:0 0 16px;text-align:center;
+  color:#8cf5ea;letter-spacing:.04em;text-shadow:0 0 20px rgba(46,230,214,.45)}
+.step-card{background:rgba(12,7,32,.58);border:1.5px solid rgba(160,130,255,.28);border-radius:18px;
+  padding:16px;margin-bottom:12px;animation:stepIn .5s cubic-bezier(.22,1,.36,1) both;
+  box-shadow:0 6px 20px rgba(0,0,0,.3)}
+@keyframes stepIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.correct-sol { font-size:15px; line-height:1.7; color:#e9e4ff; }
+.correct-sol div { margin-bottom: 6px; }
+.correct-sol b { color: #ffcf5c; }
+
+/* ============ ФУТЕР ============ */
+footer{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;justify-content:center;
+  align-items:center;flex-wrap:wrap;padding:11px 12px;
+  background:linear-gradient(0deg,rgba(5,3,15,.97),rgba(10,5,28,.85) 70%,rgba(10,5,28,0));
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(160,130,255,.2)}
+.stat{font-size:12.5px;font-weight:800;color:#a99bd6;background:rgba(255,255,255,.055);
+  border:1px solid rgba(160,130,255,.22);padding:6px 12px;border-radius:12px;white-space:nowrap}
+.stat b{color:#ffcf5c;font-size:14px}
+
+/* ============ TOAST ============ */
+.toast{position:fixed;left:50%;top:22%;transform:translate(-50%,-24px) scale(.9);z-index:80;pointer-events:none;
+  font-weight:900;font-size:clamp(16px,3.6vw,25px);padding:16px 28px;border-radius:20px;color:#2b1700;
+  background:linear-gradient(135deg,#ffe9a8,#ffcf5c 45%,#ff9ee0);
+  box-shadow:0 0 44px rgba(255,207,92,.75),0 14px 40px rgba(0,0,0,.45);
+  opacity:0;transition:.35s cubic-bezier(.22,1,.36,1);text-align:center;max-width:88vw}
+.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+
+@media(max-width:560px){
+  .scroll-card{padding:18px 12px 16px;border-radius:20px}
+  .btn{padding:12px 16px;font-size:14px}
+  .header-top{flex-direction:column;align-items:stretch}
+  .user-info{justify-content:center}
+  .step-line { flex-direction: column; align-items: flex-start; }
+  .input-text { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<!-- ЭКРАН 1: ВЫБОР ЗАДАЧИ -->
+<div id="menuScreen" class="screen">
+  <header>
+    <div class="header-top">
+      <h1>🧩 Зал Логических Задач</h1>
+      <div class="user-info">
+        <span class="nick-badge">🧙 <span id="userNickLabel">—</span></span>
+        <a href="index.html" class="btn tiny">← На главную</a>
+      </div>
+    </div>
+    <p style="color:#b9a9e8;font-weight:700;margin-top:10px">Составь уравнение и найди ответ:</p>
+  </header>
+  
+  <div class="menu-grid">
+    <div class="menu-card" data-mode="easy">
+      <div class="icon">🍎</div>
+      <h3>Простые задачи</h3>
+      <p>Было, стало, осталось. Одно действие.</p>
+    </div>
+    <div class="menu-card" data-mode="medium">
+      <div class="icon">📦</div>
+      <h3>Задачи со скобками</h3>
+      <p>Добавили, потом разделили. Нужны скобки.</p>
+    </div>
+    <div class="menu-card" data-mode="hard">
+      <div class="icon">📈</div>
+      <h3>Задачи в два действия</h3>
+      <p>Сначала привезли, потом увезли.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ЭКРАН 2: ТРЕНАЖЁР -->
+<div id="taskScreen" class="screen hidden">
+  <header>
+    <div class="header-top">
+      <h1 id="headerTitle">Составление уравнения</h1>
+      <div class="user-info">
+        <button id="backToMenuBtn" class="btn tiny back-btn">← В меню</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="scroll-card">
+      <div class="task-text" id="taskText">…</div>
+
+      <div class="equation-builder" id="equationBuilder">
+        <!-- Поля генерируются здесь -->
+      </div>
+
+      <div class="actions" style="margin-top:20px">
+        <button id="checkBtn" class="btn primary">Проверить</button>
+        <button id="newBtn" class="btn">🎲 Новая задача</button>
+        <button id="solveBtn" class="btn ghost">💡 Показать решение</button>
+      </div>
+
+      <div id="feedback" class="feedback"></div>
+    </section>
+
+    <section id="stepsPanel" class="steps-panel hidden">
+      <h2>📜 Правильное оформление</h2>
+      <div id="stepsList"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="stat">🔥 Серия: <b id="streak">0</b></div>
+    <div class="stat">🏅 Счёт: <b id="score">0</b></div>
+  </footer>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ================================================================
+   1. КОНФИГ FIREBASE
+   ================================================================ */
+const firebaseConfig = {
+  apiKey:            "ВАШ_API_KEY",
+  authDomain:        "ВАШ_PROJECT.firebaseapp.com",
+  databaseURL:       "https://ВАШ_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "ВАШ_PROJECT",
+  storageBucket:     "ВАШ_PROJECT.appspot.com",
+  messagingSenderId: "ВАШ_SENDER_ID",
+  appId:             "ВАШ_APP_ID"
+};
+const CFG_OK = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("ВАШ_");
+
+const Store = {
+  mode: 'local', db: null,
+  async init(){
+    if (!CFG_OK) return false;
+    try { firebase.initializeApp(firebaseConfig); this.db = firebase.database(); this.mode = 'cloud'; return true; } 
+    catch(e){ return false; }
+  },
+  async saveAttempt(a){
+    if (this.mode === 'cloud') { await this.db.ref('attempts').push(a); } 
+    else { console.log('Local save:', a); }
+  }
+};
+
+/* ================================================================
+   2. ЗВЁЗДЫ И ПЕРЕМЕННЫЕ
+   ================================================================ */
+(function makeStars(){
+  const box = document.getElementById('stars'), frag = document.createDocumentFragment();
+  for (let i = 0; i < 80; i++){
+    const s = document.createElement('div'); s.className = 'star';
+    const sz = 1 + Math.random()*2.5;
+    s.style.width = sz+'px'; s.style.height = sz+'px';
+    s.style.left = (Math.random()*100).toFixed(2)+'%'; s.style.top = (Math.random()*100).toFixed(2)+'%';
+    s.style.animationDelay = (Math.random()*5).toFixed(2)+'s';
+    frag.appendChild(s);
+  }
+  box.appendChild(frag);
+})();
+
+const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const PRAISE = ['Отличное уравнение! ✨','Верно! Так держать! 🌟','Логика на высоте! 🪄','Математический склад ума! 🔮','Гениально! 🏆'];
+
+let current = null;
+let currentMode = 'easy';
+let streak = 0, score = 0;
+let studentNick = localStorage.getItem('magic_nick') || 'Ученик';
+
+const $ = id => document.getElementById(id);
+const taskEl = $('taskText'), eqBuilder = $('equationBuilder'), fbEl = $('feedback'),
+      stepsPanel = $('stepsPanel'), stepsList = $('stepsList');
+
+$('userNickLabel').textContent = studentNick;
+$('userNickLabel').parentElement.parentElement.innerHTML += `<a href="index.html" class="btn tiny" style="margin-left:8px">← На главную</a>`;
+
+/* ================================================================
+   3. ГЕНЕРАТОРЫ ЗАДАЧ
+   ================================================================ */
+const Generators = {
+  easy: () => {
+    const types = ['minus', 'plus', 'mult'];
+    const t = types[rnd(0,2)];
+    if (t === 'minus') {
+      const ans = rnd(10, 30), diff = rnd(3, 9);
+      return {
+        text: `В корзине было несколько яблок. После того как из неё взяли <b>${diff}</b> яблок, в ней осталось <b>${ans}</b> яблок. Сколько яблок было в корзине сначала?`,
+        xDesc: 'было яблок',
+        expr1: 'x', action1: `взяли ${diff}`, expr2: `x - ${diff}`,
+        cond: ans,
+        equation: `x - ${diff} = ${ans}`,
+        ans: ans + diff,
+        steps: [`x = ${ans} + ${diff}`, `x = ${ans+diff}`]
+      };
+    }
+    if (t === 'plus') {
+      const ans = rnd(5, 20), add = rnd(10, 25);
+      return {
+        text: `У Пети было несколько марок. Ему подарили ещё <b>${add}</b> марок, и у него стало <b>${ans+add}</b> марок. Сколько марок было у Пети сначала?`,
+        xDesc: 'было марок',
+        expr1: 'x', action1: `подарили ${add}`, expr2: `x + ${add}`,
+        cond: ans+add,
+        equation: `x + ${add} = ${ans+add}`,
+        ans: ans,
+        steps: [`x = ${ans+add} - ${add}`, `x = ${ans}`]
+      };
+    }
+    if (t === 'mult') {
+      const ans = rnd(3, 9), mult = rnd(4, 8);
+      return {
+        text: `Задумали число. Умножили его на <b>${mult}</b> и получили <b>${ans*mult}</b>. Какое число задумали?`,
+        xDesc: 'задуманное число',
+        expr1: 'x', action1: `умножили на ${mult}`, expr2: `x * ${mult}`,
+        cond: ans*mult,
+        equation: `x * ${mult} = ${ans*mult}`,
+        ans: ans,
+        steps: [`x = ${ans*mult} : ${mult}`, `x = ${ans}`]
+      };
+    }
+  },
+  
+  medium: () => {
+    const ans = rnd(10, 25), add = rnd(5, 15), div = rnd(2, 4);
+    return {
+      text: `В магазин привезли несколько кг конфет. После того как продали <b>${add}</b> кг, оставшиеся конфеты разделили поровну на <b>${div}</b> пакета. В каждом пакете оказалось по <b>${ans}</b> кг. Сколько кг конфет привезли?`,
+      xDesc: 'привезли кг',
+      expr1: 'x', action1: `продали ${add}`, expr2: `x - ${add}`,
+      action2: `разделили на ${div}`, expr3: `(x - ${add}) / ${div}`,
+      cond: ans,
+      equation: `(x - ${add}) / ${div} = ${ans}`,
+      ans: ans * div + add,
+      steps: [`x - ${add} = ${ans} * ${div}`, `x - ${add} = ${ans*div}`, `x = ${ans*div} + ${add}`, `x = ${ans*div+add}`]
+    };
+  },
+
+  hard: () => {
+    const ans = rnd(20, 50), add = rnd(10, 20), minus = rnd(5, 15);
+    return {
+      text: `На складе было несколько коробок. Сначала привезли ещё <b>${add}</b> коробок, а затем увезли <b>${minus}</b> коробок. После этого на складе осталось <b>${ans}</b> коробок. Сколько коробок было на складе сначала?`,
+      xDesc: 'было коробок',
+      expr1: 'x', action1: `привезли ${add}`, expr2: `x + ${add}`,
+      action2: `увезли ${minus}`, expr3: `x + ${add} - ${minus}`,
+      cond: ans,
+      equation: `x + ${add} - ${minus} = ${ans}`,
+      ans: ans - add + minus,
+      steps: [`x + ${add} = ${ans} + ${minus}`, `x + ${add} = ${ans+minus}`, `x = ${ans+minus} - ${add}`, `x = ${ans+minus-add}`]
+    };
+  }
+};
+
+/* ================================================================
+   4. ЛОГИКА ИНТЕРФЕЙСА
+   ================================================================ */
+document.querySelectorAll('.menu-card').forEach(card => {
+  card.addEventListener('click', () => {
+    currentMode = card.dataset.mode;
+    $('menuScreen').classList.add('hidden');
+    $('taskScreen').classList.remove('hidden');
+    newTask();
+  });
+});
+
+$('backToMenuBtn').addEventListener('click', () => {
+  $('taskScreen').classList.add('hidden');
+  $('menuScreen').classList.remove('hidden');
+});
+
+function newTask(){
+  current = Generators[currentMode]();
+  
+  taskEl.innerHTML = current.text;
+  fbEl.textContent = ''; fbEl.className = 'feedback';
+  stepsPanel.classList.add('hidden'); stepsList.innerHTML = '';
+  
+  let html = `
+    <div class="step-line">
+      <span>Пусть x —</span>
+      <input type="text" class="input-text" id="step-let" placeholder="что означает x?">
+    </div>
+    <div class="step-line">
+      <span>Тогда было x.</span>
+    </div>
+    <div class="step-line">
+      <span>После того как ${current.action1}, стало</span>
+      <input type="text" class="input-text" id="step-expr1" placeholder="выражение с x">
+    </div>
+  `;
+  
+  if (current.action2) {
+    html += `
+      <div class="step-line">
+        <span>Потом ${current.action2}, и стало</span>
+        <input type="text" class="input-text" id="step-expr2" placeholder="новое выражение">
+      </div>
+    `;
+  }
+  
+  html += `
+    <div class="step-line">
+      <span>По условию задачи это равно</span>
+      <input type="text" class="input-text" id="step-cond" placeholder="число" style="max-width:100px;">
+    </div>
+    <div style="margin-top:15px;">
+      <div style="font-size:15px; font-weight:800; color:#ffcf5c; margin-bottom:8px;">Составим уравнение:</div>
+      <input type="text" class="input-eq" id="step-eq" placeholder="например, x - 5 = 12">
+      <div class="hint-text">Можно писать без пробелов: х-5=12 или 5х=85</div>
+    </div>
+    <div class="final-answer-row">
+      <span>Ответ (x):</span>
+      <input type="number" id="final-answer" placeholder="?">
+    </div>
+  `;
+  
+  eqBuilder.innerHTML = html;
+  
+  $('checkBtn').disabled = false; $('newBtn').disabled = false; $('solveBtn').disabled = false;
+  document.getElementById('step-let').focus();
+}
+
+/* ================================================================
+   5. УМНАЯ ПРОВЕРКА (С ОКРУГЛЕНИЕМ)
+   ================================================================ */
+function normalizeMath(str) {
+  if (!str) return "";
+  let s = str.toLowerCase();
+  s = s.replace(/[-−–—]/g, '-'); 
+  s = s.replace(/[·×]/g, '*'); 
+  s = s.replace(/[:÷]/g, '/'); 
+  s = s.replace(/[хХ]/g, 'x'); 
+  s = s.replace(/[\s\u00A0]+/g, ''); 
+
+  s = s.replace(/(\d)(x)/g, '$1*$2');
+  s = s.replace(/(x)(\d)/g, '$1*$2');
+  s = s.replace(/(\d)(\()/g, '$1*$2');
+  s = s.replace(/(\))(x)/g, '$1*$2');
+  s = s.replace(/(\))(\d)/g, '$1*$2');
+  s = s.replace(/(x)(\()/g, '$1*$2');
+
+  return s;
+}
+
+function areExprsEqual(expr1, expr2) {
+  let e1 = normalizeMath(expr1);
+  let e2 = normalizeMath(expr2);
+  if (!e1 || !e2) return false;
+  try {
+    // Проверяем при нескольких x, чтобы убедиться, что выражения идентичны
+    let val1_2 = Function('x', `return ${e1}`)(2);
+    let val2_2 = Function('x', `return ${e2}`)(2);
+    let val1_3 = Function('x', `return ${e1}`)(3);
+    let val2_3 = Function('x', `return ${e2}`)(3);
+    
+    // Используем Math.abs для надежности
+    return Math.abs(val1_2 - val2_2) < 0.001 && Math.abs(val1_3 - val2_3) < 0.001;
+  } catch(e) {
+    return false;
+  }
+}
+
+function getRoot(eqStr) {
+  let parts = eqStr.split('=');
+  if (parts.length !== 2) return null;
+  let left = parts[0];
+  let right = parts[1];
+  try {
+    let f0_left = Function('x', `return ${left}`)(0);
+    let f0_right = Function('x', `return ${right}`)(0);
+    let b = f0_left - f0_right;
+
+    let f1_left = Function('x', `return ${left}`)(1);
+    let f1_right = Function('x', `return ${right}`)(1);
+    let ab = f1_left - f1_right;
+
+    let a = ab - b;
+    if (Math.abs(a) < 0.000001) return null; // Если a почти 0
+    return -b / a;
+  } catch(e) {
+    return null;
+  }
+}
+
+async function checkAnswer(){
+  if (!current) return;
+  
+  const expr1Input = document.getElementById('step-expr1');
+  const expr2Input = document.getElementById('step-expr2');
+  const condInput = document.getElementById('step-cond');
+  const eqInput = document.getElementById('step-eq');
+  const ansInput = document.getElementById('final-answer');
+
+  let isCorrect = true;
+  let errorMsg = '';
+
+  // Проверяем выражения
+  if (!areExprsEqual(expr1Input.value, current.expr2)) {
+    isCorrect = false;
+    expr1Input.classList.add('shake');
+    setTimeout(()=>expr1Input.classList.remove('shake'), 500);
+  }
+  if (expr2Input && !areExprsEqual(expr2Input.value, current.expr3)) {
+    isCorrect = false;
+    expr2Input.classList.add('shake');
+    setTimeout(()=>expr2Input.classList.remove('shake'), 500);
+  }
+  if (parseInt(condInput.value) !== current.cond) {
+    isCorrect = false;
+    condInput.classList.add('shake');
+    setTimeout(()=>condInput.classList.remove('shake'), 500);
+  }
+
+  // Проверяем уравнение
+  let userEq = normalizeMath(eqInput.value);
+  let userAns = parseInt(ansInput.value, 10);
+
+  // Запрещаем "x = 17"
+  let isTrivial = false;
+  let parts = userEq.split('=');
+  if (parts.length === 2) {
+    let p1 = parts[0], p2 = parts[1];
+    if ((p1 === 'x' && /^\d+$/.test(p2)) || (p2 === 'x' && /^\d+$/.test(p1))) {
+      isTrivial = true;
+    }
+  }
+
+  let root = getRoot(userEq);
+  
+  // Округляем корень до 3 знаков, чтобы убрать ошибки плавающей запятой (59.9999999 -> 60)
+  if (root !== null) {
+    root = Math.round(root * 1000) / 1000; 
+  }
+
+  if (root === null || Math.abs(root - current.ans) > 0.001 || isTrivial) {
+    isCorrect = false;
+    eqInput.classList.add('shake');
+    setTimeout(()=>eqInput.classList.remove('shake'), 500);
+    if (isTrivial) errorMsg = 'Нужно составить уравнение, а не просто написать "x = ответ"!';
+  }
+
+  if (userAns !== current.ans) {
+    isCorrect = false;
+    ansInput.classList.add('shake');
+    setTimeout(()=>ansInput.classList.remove('shake'), 500);
+  }
+
+  if (isCorrect){
+    streak++; score += 10;
+    fbEl.textContent = PRAISE[rnd(0, PRAISE.length-1)];
+    fbEl.className = 'feedback ok';
+    showToast('Верно! ✨');
+    burstConfetti();
+    magicSound();
+    
+    if (Store.mode === 'cloud' && studentNick !== 'Ученик') {
+      Store.saveAttempt({
+        nick: studentNick, timestamp: Date.now(), 
+        equation: current.equation, type: 'word_problem_' + currentMode,
+        subject: 'word_problems', correct: true, answer: userAns, correctAnswer: current.ans
+      });
+    }
+    
+    eqBuilder.querySelectorAll('input').forEach(inp => inp.disabled = true);
+    $('checkBtn').disabled = true;
+    
+    renderSteps();
+    setTimeout(newTask, 5000); 
+  } else {
+    streak = 0;
+    fbEl.textContent = errorMsg || 'Проверь шаги и само уравнение! ✨';
+    fbEl.className = 'feedback bad';
+    
+    if (Store.mode === 'cloud' && studentNick !== 'Ученик') {
+      Store.saveAttempt({
+        nick: studentNick, timestamp: Date.now(), 
+        equation: current.equation, type: 'word_problem_' + currentMode,
+        subject: 'word_problems', correct: false, answer: userAns, correctAnswer: current.ans
+      });
+    }
+  }
+  updateStats();
+}
+
+/* ================================================================
+   6. РАЗБОР
+   ================================================================ */
+function renderSteps(){
+  stepsList.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'step-card';
+  
+  let html = `<div class="correct-sol">`;
+  html += `<div>Пусть <b>x</b> — ${current.xDesc}.</div>`;
+  html += `<div>Тогда было x.</div>`;
+  html += `<div>После того как ${current.action1}, стало <b>${current.expr2}</b>.</div>`;
+  if (current.action2) {
+    html += `<div>Потом ${current.action2}, и стало <b>${current.expr3}</b>.</div>`;
+    html += `<div>По условию задачи это равно <b>${current.cond}</b>.</div>`;
+    html += `<div>Составим уравнение: <b>${current.equation}</b>.</div>`;
+  } else {
+    html += `<div>По условию задачи это равно <b>${current.cond}</b>.</div>`;
+    html += `<div>Составим уравнение: <b>${current.equation}</b>.</div>`;
+  }
+  
+  current.steps.forEach(step => {
+    html += `<div>${step}</div>`;
+  });
+  
+  html += `<div style="margin-top:10px; color:#a6ff4d; font-weight:900;">Ответ: ${current.ans}.</div>`;
+  html += `</div>`;
+  
+  card.innerHTML = html;
+  stepsList.appendChild(card);
+  stepsPanel.classList.remove('hidden');
+}
+
+function updateStats(){
+  $('streak').textContent = streak;
+  $('score').textContent = score;
+}
+
+/* ================================================================
+   7. ЭФФЕКТЫ
+   ================================================================ */
+function showToast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.remove('show'), 2000);
+}
+function burstConfetti(){
+  if (typeof confetti !== 'function') return;
+  confetti({ particleCount: 100, spread: 80, origin: {y: .65}, colors: ['#ffcf5c','#2ee6d6','#ff4fd8'] });
+}
+function magicSound(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC(), now = ctx.currentTime;
+    [660, 880].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, now + i*0.1);
+      g.gain.linearRampToValueAtTime(0.1, now + i*0.1 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i*0.1 + 0.25);
+      o.connect(g); g.connect(ctx.destination); o.start(now + i*0.1); o.stop(now + i*0.1 + 0.3);
+    });
+    setTimeout(() => ctx.close(), 800);
+  } catch(e){}
+}
+
+/* ================================================================
+   8. СОБЫТИЯ
+   ================================================================ */
+$('checkBtn').addEventListener('click', checkAnswer);
+$('newBtn').addEventListener('click', newTask);
+$('solveBtn').addEventListener('click', () => {
+  if (!current) return;
+  renderSteps();
+  eqBuilder.querySelectorAll('input').forEach(inp => inp.disabled = true);
+  $('checkBtn').disabled = true; $('solveBtn').disabled = true;
+});
+
+// Enter для проверки
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !$('taskScreen').classList.contains('hidden')) {
+    checkAnswer();
+  }
+});
+
+// СТАРТ
+(async function init(){
+  await Store.init();
+  updateStats();
+})();
+</script>
+</body>
+</html>
