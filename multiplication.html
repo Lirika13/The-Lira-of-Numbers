@@ -1,0 +1,919 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Зал Умножения — Магическая академия</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+/* ============ БАЗА ============ */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  min-height:100vh;font-family:'Nunito',system-ui,sans-serif;color:#e9e4ff;
+  background:
+    radial-gradient(1100px 750px at 50% -12%, #4a2385 0%, rgba(74,35,133,0) 62%),
+    radial-gradient(900px 700px at 92% 12%, #123a5e 0%, rgba(18,58,94,0) 60%),
+    radial-gradient(800px 800px at 6% 85%, #3a0f52 0%, rgba(58,15,82,0) 60%),
+    linear-gradient(170deg, #12072b 0%, #1a0b3d 35%, #0d1030 70%, #05030f 100%);
+  background-attachment:fixed;overflow-x:hidden;padding-bottom:110px;
+}
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 6px 1px rgba(255,255,255,.85);animation:twinkle 3s infinite ease-in-out;opacity:.7}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+
+.screen{position:relative;z-index:2}
+.hidden{display:none !important}
+
+/* ============ ШАПКА ============ */
+header{position:relative;z-index:2;text-align:center;padding:22px 16px 6px}
+.header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;max-width:880px;margin:0 auto 8px;padding:0 16px}
+.header-top h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(16px,3.2vw,26px);margin:0;letter-spacing:.02em;
+  background:linear-gradient(100deg,#ffd76a,#fff3c4 35%,#ffcf5c 55%,#e0a3ff 80%,#2ee6d6);
+  -webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.2}
+.user-info{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nick-badge{font-size:13px;font-weight:800;color:#ffe8b0;background:rgba(255,207,92,.13);
+  border:1px solid rgba(255,207,92,.4);padding:6px 12px;border-radius:12px;white-space:nowrap}
+.btn.tiny{padding:7px 14px;font-size:12px;border-radius:11px;text-decoration:none;display:inline-block}
+.btn.back-btn{background:rgba(255,255,255,.07);border:1.5px solid rgba(160,130,255,.38);color:#e8dfff;cursor:pointer;font-family:'Nunito';font-weight:900}
+.btn.back-btn:hover{border-color:#ffcf5c;color:#fff;box-shadow:0 0 15px rgba(255,207,92,.3)}
+
+/* ============ МЕНЮ ВЫБОРА ============ */
+#menuScreen{max-width:880px;margin:0 auto;padding:20px 16px;animation:cardIn .5s ease}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:20px}
+.menu-card{background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.02));
+  border:1.5px solid rgba(160,130,255,.3);border-radius:20px;padding:24px 20px;cursor:pointer;
+  transition:.25s;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.menu-card:hover{transform:translateY(-5px);border-color:#ffcf5c;box-shadow:0 12px 30px rgba(255,207,92,.2)}
+.menu-card .icon{font-size:36px;margin-bottom:10px;filter:drop-shadow(0 0 10px rgba(255,255,255,.4))}
+.menu-card h3{font-family:'Cinzel',serif;font-size:18px;margin:0 0 6px;color:#ffe8b0}
+.menu-card p{font-size:13px;color:#b9a9e8;margin:0;font-weight:700;line-height:1.4}
+
+/* ============ КАРТОЧКА ЗАДАНИЯ ============ */
+main{position:relative;z-index:2;max-width:880px;margin:0 auto;padding:0 16px}
+.scroll-card{position:relative;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
+  border:1.5px solid rgba(255,207,92,.36);border-radius:26px;padding:24px 20px 22px;
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  box-shadow:0 0 46px rgba(120,80,255,.22),0 18px 46px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.12);
+  animation:cardIn .4s cubic-bezier(.22,1,.36,1)}
+@keyframes cardIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.type-badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  padding:4px 12px;border-radius:999px;background:rgba(46,230,214,.13);color:#7df3e8;
+  border:1px solid rgba(46,230,214,.4);margin-bottom:8px}
+
+.task-text{display:block;text-align:center;font-weight:900;font-size:clamp(22px,5vw,38px);line-height:1.5;
+  padding:24px 6px 14px;animation:orbFloat 4.6s ease-in-out infinite;
+  filter:drop-shadow(0 0 22px rgba(160,120,255,.4));word-break:break-word}
+.task-text.word{font-size:clamp(16px,3.5vw,22px);line-height:1.6;padding:20px 10px;animation:none;filter:none;text-align:left}
+@keyframes orbFloat{0%,100%{transform:translateY(0) rotate(-.4deg)}50%{transform:translateY(-7px) rotate(.4deg)}}
+
+/* ============ ПОЛЯ ВВОДА ============ */
+.answer-row{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:14px}
+.answer-row .xlbl{font-size:clamp(20px,4vw,28px);font-weight:900;color:#c9b8ff}
+
+input[type="number"], input[type="text"]{
+  padding:12px 14px;font-family:'Nunito',sans-serif;font-size:20px;font-weight:900;
+  text-align:center;color:#fff;background:rgba(10,6,28,.66);border:2px solid rgba(160,130,255,.5);
+  border-radius:16px;outline:none;transition:.22s;
+}
+input[type="number"]::placeholder, input[type="text"]::placeholder{color:#6b5aa8;font-weight:700}
+input:focus{border-color:#ffcf5c;box-shadow:0 0 0 4px rgba(255,207,92,.16),0 0 22px rgba(255,207,92,.3)}
+input.shake{animation:shake .42s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}
+  40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+
+/* ============ ВИЗУАЛЬНЫЙ СТОЛБИК (СЕТКА) ============ */
+#columnInputBlock { text-align: center; margin-top: 15px; animation: cardIn .3s ease; }
+.column-grid-container {
+  display: inline-block; padding: 15px 25px;
+  background: rgba(10,6,28,0.5); border-radius: 20px;
+  border: 1.5px solid rgba(160,130,255,0.4);
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+}
+.column-grid {
+  display: grid;
+  gap: 4px;
+  justify-content: end;
+  font-family: 'Nunito', monospace;
+}
+.grid-row { display: contents; }
+.grid-cell {
+  width: clamp(32px, 7vw, 44px); height: clamp(40px, 9vw, 56px);
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(20px, 5vw, 32px); font-weight: 900; color: #e9e4ff;
+}
+.grid-cell input {
+  width: 100%; height: 100%; padding: 0; margin: 0;
+  font-size: clamp(18px, 4.5vw, 28px); font-weight: 900; text-align: center;
+  color: #ffcf5c; background: rgba(10,6,28,0.8);
+  border: 2px solid rgba(160,130,255,0.5); border-radius: 8px;
+  outline: none; transition: 0.2s;
+}
+.grid-cell input:focus {
+  border-color: #ffcf5c; box-shadow: 0 0 15px rgba(255,207,92,0.5);
+  background: rgba(10,6,28,1);
+}
+.grid-cell input.correct-border { border-color: #a6ff4d; box-shadow: 0 0 10px rgba(166,255,77,0.3); }
+.grid-cell input.wrong-border { border-color: #ff9ec4; box-shadow: 0 0 10px rgba(255,79,150,0.3); }
+
+.grid-line { height: 3px; background: #ffcf5c; border-radius: 2px; margin: 4px 0; }
+
+/* ============ СЛОЖНЫЕ ЗАДАЧИ ============ */
+.complex-steps{display:flex;flex-direction:column;gap:12px;margin-top:20px;background:rgba(0,0,0,.2);padding:16px;border-radius:16px}
+.step-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;font-size:16px;font-weight:800;color:#c9bcef}
+.step-row span.step-num{color:#ffcf5c;min-width:90px;text-align:right;font-size:14px}
+.step-row .expr-input{width:120px;font-size:16px;padding:8px 10px;border-radius:10px}
+.step-row .res-input{width:80px;font-size:16px;padding:8px 10px;border-radius:10px}
+.final-answer-row{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:16px;
+  padding-top:16px;border-top:1px dashed rgba(160,130,255,.3);font-size:18px;font-weight:900;color:#ffe8b0}
+.final-answer-row input{width:100px;font-size:20px}
+
+/* ============ КНОПКИ ============ */
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.btn{font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;padding:13px 22px;border-radius:16px;
+  cursor:pointer;color:#e8dfff;background:rgba(255,255,255,.07);
+  border:1.5px solid rgba(160,130,255,.38);transition:.22s}
+.btn:hover:not(:disabled){transform:translateY(-2px);color:#fff;border-color:rgba(255,207,92,.65);box-shadow:0 0 22px rgba(255,207,92,.3)}
+.btn.primary{background:linear-gradient(135deg,#ffcf5c,#ffa63c 55%,#ff7ad9);color:#2b1700;border:none;
+  box-shadow:0 0 26px rgba(255,175,60,.5),0 8px 20px rgba(0,0,0,.35)}
+.btn.primary:hover:not(:disabled){color:#2b1700;box-shadow:0 0 38px rgba(255,190,90,.8),0 10px 24px rgba(0,0,0,.4)}
+.btn.ghost{background:rgba(46,230,214,.09);border-color:rgba(46,230,214,.4);color:#8cf5ea}
+.btn.ghost:hover:not(:disabled){border-color:#2ee6d6;box-shadow:0 0 22px rgba(46,230,214,.4)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+.feedback{text-align:center;font-weight:800;font-size:16px;margin-top:14px;min-height:24px;line-height:1.45;transition:.3s}
+.feedback.ok{color:#a6ff4d;text-shadow:0 0 18px rgba(166,255,77,.6)}
+.feedback.bad{color:#ff9ec4;text-shadow:0 0 18px rgba(255,79,150,.45)}
+
+/* ============ РАЗБОР ============ */
+.steps-panel{margin-top:22px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+  border:1.5px solid rgba(46,230,214,.32);border-radius:24px;padding:20px 16px 18px;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:0 0 40px rgba(46,230,214,.13),0 16px 40px rgba(0,0,0,.4);transition:.35s}
+.steps-panel h2{font-family:'Cinzel',serif;font-size:clamp(16px,3.2vw,21px);margin:0 0 16px;text-align:center;
+  color:#8cf5ea;letter-spacing:.04em;text-shadow:0 0 20px rgba(46,230,214,.45)}
+.step-card{background:rgba(12,7,32,.58);border:1.5px solid rgba(160,130,255,.28);border-radius:18px;
+  padding:14px 14px 12px;margin-bottom:12px;animation:stepIn .5s cubic-bezier(.22,1,.36,1) both;
+  box-shadow:0 6px 20px rgba(0,0,0,.3)}
+@keyframes stepIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.rule{font-size:15px;font-weight:700;line-height:1.6;color:#c9bcef;text-align:center}
+.rule b{color:#ffcf5c;}
+.static-column{ font-family:monospace; font-size:24px; line-height: 1.3; text-align: right; display: inline-block; padding: 10px 20px; background: rgba(0,0,0,.2); border-radius: 12px; margin-top: 10px; }
+
+/* ============ ФУТЕР ============ */
+footer{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;justify-content:center;
+  align-items:center;flex-wrap:wrap;padding:11px 12px;
+  background:linear-gradient(0deg,rgba(5,3,15,.97),rgba(10,5,28,.85) 70%,rgba(10,5,28,0));
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(160,130,255,.2)}
+.stat{font-size:12.5px;font-weight:800;color:#a99bd6;background:rgba(255,255,255,.055);
+  border:1px solid rgba(160,130,255,.22);padding:6px 12px;border-radius:12px;white-space:nowrap}
+.stat b{color:#ffcf5c;font-size:14px}
+
+/* ============ TOAST ============ */
+.toast{position:fixed;left:50%;top:22%;transform:translate(-50%,-24px) scale(.9);z-index:80;pointer-events:none;
+  font-weight:900;font-size:clamp(16px,3.6vw,25px);padding:16px 28px;border-radius:20px;color:#2b1700;
+  background:linear-gradient(135deg,#ffe9a8,#ffcf5c 45%,#ff9ee0);
+  box-shadow:0 0 44px rgba(255,207,92,.75),0 14px 40px rgba(0,0,0,.45);
+  opacity:0;transition:.35s cubic-bezier(.22,1,.36,1);text-align:center;max-width:88vw}
+.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+
+@media(max-width:560px){
+  .scroll-card{padding:18px 12px 16px;border-radius:20px}
+  .btn{padding:12px 16px;font-size:14px}
+  .stat{font-size:11px;padding:5px 9px}
+  .header-top{flex-direction:column;align-items:stretch}
+  .user-info{justify-content:center}
+  .step-row{flex-direction:column;align-items:flex-start}
+  .step-row span.step-num{text-align:left}
+  .step-row .expr-input, .step-row .res-input{width:100%}
+}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<!-- ЭКРАН 1: ВЫБОР ТЕМЫ -->
+<div id="menuScreen" class="screen">
+  <header>
+    <div class="header-top">
+      <h1>🧮 Зал Умножения</h1>
+      <div class="user-info">
+        <span class="nick-badge">🧙 <span id="userNickLabel">—</span></span>
+        <a href="index.html" class="btn tiny">← На главную</a>
+      </div>
+    </div>
+    <p style="color:#b9a9e8;font-weight:700;margin-top:10px">Выбери испытание, юный маг:</p>
+  </header>
+  
+  <div class="menu-grid">
+    <div class="menu-card" data-mode="mult_10">
+      <div class="icon">🔢</div>
+      <h3>Таблица умножения</h3>
+      <p>Числа до 10. Разомнись перед большими числами!</p>
+    </div>
+    <div class="menu-card" data-mode="mult_100">
+      <div class="icon">💯</div>
+      <h3>Умножение до 100</h3>
+      <p>Двузначные на однозначные. Уровень подмастерья.</p>
+    </div>
+    <div class="menu-card" data-mode="mult_1000">
+      <div class="icon">🌌</div>
+      <h3>Умножение до 1000</h3>
+      <p>Трёхзначные числа. Решай в столбик!</p>
+    </div>
+    <div class="menu-card" data-mode="mult_mix">
+      <div class="icon">🎲</div>
+      <h3>Микс</h3>
+      <p>Случайные числа. Иногда придётся решать в столбик.</p>
+    </div>
+    <div class="menu-card" data-mode="props">
+      <div class="icon">📜</div>
+      <h3>Свойства умножения</h3>
+      <p>Переместительное, сочетательное, на 0 и на 1. И хитрые примеры!</p>
+    </div>
+    <div class="menu-card" data-mode="word_complex">
+      <div class="icon">🧩</div>
+      <h3>Задачи в несколько действий</h3>
+      <p>Составь решение по шагам и найди ответ.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ЭКРАН 2: ТРЕНАЖЁР -->
+<div id="taskScreen" class="screen hidden">
+  <header>
+    <div class="header-top">
+      <h1 id="headerTitle">Испытание</h1>
+      <div class="user-info">
+        <button id="backToMenuBtn" class="btn tiny back-btn">← В меню</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="scroll-card">
+      <div class="type-badge" id="typeBadge">Задание</div>
+      <div class="task-text" id="taskText">…</div>
+
+      <!-- 1. Блок для простых заданий -->
+      <div id="simpleInputBlock">
+        <div class="answer-row">
+          <span class="xlbl">Ответ:</span>
+          <input id="answerInput" type="number" inputmode="numeric" placeholder="?" autocomplete="off" style="width:130px">
+        </div>
+      </div>
+
+      <!-- 2. Блок для визуального столбика -->
+      <div id="columnInputBlock" class="hidden">
+        <div class="column-grid-container">
+          <div class="column-grid" id="columnGrid">
+            <!-- Сетка генерируется через JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Блок для сложных задач -->
+      <div id="complexInputBlock" class="hidden">
+        <div class="complex-steps" id="complexStepsContainer"></div>
+        <div class="final-answer-row">
+          <span>Ответ:</span>
+          <input id="finalAnswerInput" type="number" inputmode="numeric" placeholder="?">
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:20px">
+        <button id="checkBtn" class="btn primary">Проверить</button>
+        <button id="newBtn" class="btn">🎲 Новое задание</button>
+        <button id="solveBtn" class="btn ghost">💡 Показать правило</button>
+      </div>
+
+      <div id="feedback" class="feedback"></div>
+    </section>
+
+    <section id="stepsPanel" class="steps-panel hidden">
+      <h2>📜 Магическое объяснение</h2>
+      <div id="stepsList"></div>
+    </section>
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ================================================================
+   1. КОНФИГ FIREBASE (ВСТАВЬТЕ СВОИ ЗНАЧЕНИЯ)
+   ================================================================ */
+const firebaseConfig = {
+  apiKey:            "ВАШ_API_KEY",
+  authDomain:        "ВАШ_PROJECT.firebaseapp.com",
+  databaseURL:       "https://ВАШ_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "ВАШ_PROJECT",
+  storageBucket:     "ВАШ_PROJECT.appspot.com",
+  messagingSenderId: "ВАШ_SENDER_ID",
+  appId:             "ВАШ_APP_ID"
+};
+const CFG_OK = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("ВАШ_");
+
+const Store = {
+  mode: 'local', db: null,
+  async init(){
+    if (!CFG_OK) return false;
+    try { firebase.initializeApp(firebaseConfig); this.db = firebase.database(); this.mode = 'cloud'; return true; } 
+    catch(e){ return false; }
+  },
+  async saveAttempt(a){
+    if (this.mode === 'cloud') { await this.db.ref('attempts').push(a); } 
+    else { console.log('Local save:', a); }
+  }
+};
+
+/* ================================================================
+   2. ЗВЁЗДЫ И ПЕРЕМЕННЫЕ
+   ================================================================ */
+(function makeStars(){
+  const box = document.getElementById('stars'), frag = document.createDocumentFragment();
+  for (let i = 0; i < 80; i++){
+    const s = document.createElement('div'); s.className = 'star';
+    const sz = 1 + Math.random()*2.5;
+    s.style.width = sz+'px'; s.style.height = sz+'px';
+    s.style.left = (Math.random()*100).toFixed(2)+'%'; s.style.top = (Math.random()*100).toFixed(2)+'%';
+    s.style.animationDelay = (Math.random()*5).toFixed(2)+'s';
+    frag.appendChild(s);
+  }
+  box.appendChild(frag);
+})();
+
+const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const PRAISE = ['Молодец! ✨','Верно! Так держать! 🌟','Отличный счёт! 🪄','Магия чисел работает! 🔮','Супер! 🏆'];
+
+let current = null;
+let currentMode = 'mult_10';
+let streak = 0, score = 0;
+let studentNick = localStorage.getItem('magic_nick') || 'Ученик';
+let gridInputs = { steps: [], ans: [] }; // Для сбора данных из сетки
+
+const $ = id => document.getElementById(id);
+const taskEl = $('taskText'), badgeEl = $('typeBadge'), fbEl = $('feedback'),
+      simpleInputBlock = $('simpleInputBlock'), columnInputBlock = $('columnInputBlock'),
+      complexInputBlock = $('complexInputBlock'), complexStepsContainer = $('complexStepsContainer'),
+      finalAnswerInput = $('finalAnswerInput'), answerInput = $('answerInput'),
+      stepsPanel = $('stepsPanel'), stepsList = $('stepsList');
+
+$('userNickLabel').textContent = studentNick;
+$('userNickLabel').parentElement.parentElement.innerHTML += `<a href="index.html" class="btn tiny" style="margin-left:8px">← На главную</a>`;
+
+/* ================================================================
+   3. ГЕНЕРАТОРЫ ЗАДАНИЙ
+   ================================================================ */
+const Generators = {
+  mult_10: () => {
+    const a = rnd(2,9), b = rnd(2,9);
+    return { type: 'simple', text: `${a} · ${b} = ?`, ans: a*b, rule: `Таблица умножения: ${a} × ${b} = ${a*b}.` };
+  },
+  mult_100: () => {
+    const a = rnd(10,99), b = rnd(2,9);
+    return { type: 'simple', text: `${a} · ${b} = ?`, ans: a*b, rule: `Умножаем единицы, затем десятки. ${a} × ${b} = ${a*b}.` };
+  },
+  mult_1000: () => {
+    let a, b;
+    if (Math.random() > 0.5) {
+      a = rnd(100, 999);
+      b = rnd(10, 99);
+    } else {
+      a = rnd(100, 999);
+      b = rnd(100, 999);
+    }
+    const aStr = String(a);
+    const bStr = String(b);
+    const bDigits = bStr.split('').map(Number).reverse();
+    const steps = [];
+    
+    bDigits.forEach((digit, index) => {
+      const val = a * digit;
+      const str = String(val);
+      steps.push({ digit, val, str, shift: index });
+    });
+    
+    const ans = a * b;
+    
+    return { 
+      type: 'column_sequence', 
+      a, b, aStr, bStr, steps, ans, ansStr: String(ans),
+      rule: `Умножение в столбик: сначала умножаем на единицы, затем на десятки (со сдвигом), потом всё складываем.` 
+    };
+  },
+  mult_mix: () => {
+    const modes = ['mult_10', 'mult_100', 'mult_1000'];
+    return Generators[modes[rnd(0,2)]]();
+  },
+  
+  props: () => {
+    const modes = ['basic_comm', 'basic_assoc', 'basic_1', 'basic_0', 'smart_2_5', 'smart_4_25', 'smart_dist'];
+    const mode = modes[rnd(0, modes.length - 1)];
+    
+    if (mode === 'basic_comm') {
+      const a = rnd(2,9), b = rnd(2,9);
+      return { type: 'simple', text: `${a} · ${b} = ${b} · ?`, ans: a, rule: `Переместительное свойство: от перестановки множителей произведение не меняется. a · b = b · a.` };
+    }
+    if (mode === 'basic_assoc') {
+      const a = rnd(2,9), b = rnd(2,9), c = rnd(2,9);
+      return { type: 'simple', text: `(${a} · ${b}) · ${c} = ${a} · (${b} · ?)`, ans: c, rule: `Сочетательное свойство: чтобы умножить число на произведение двух чисел, можно сначала умножить его на первый множитель, а потом полученное произведение умножить на второй множитель.` };
+    }
+    if (mode === 'basic_1') {
+      const a = rnd(2,9);
+      return { type: 'simple', text: `${a} · 1 = ?`, ans: a, rule: `При умножении любого числа на 1 получается то же самое число.` };
+    }
+    if (mode === 'basic_0') {
+      const a = rnd(2,9);
+      return { type: 'simple', text: `${a} · 0 = ?`, ans: 0, rule: `При умножении любого числа на 0 получается 0.` };
+    }
+    if (mode === 'smart_2_5') {
+      const b = rnd(11, 49);
+      let parts = [2, b, 5];
+      if (Math.random() > 0.5) { [parts[0], parts[2]] = [parts[2], parts[0]]; }
+      const ans = 2 * b * 5;
+      return {
+        type: 'simple', text: `${parts[0]} · ${parts[1]} · ${parts[2]} = ?`, ans: ans,
+        rule: `<b>Применим переместительное и сочетательное свойства!</b><br>Заметим, что <b>2</b> и <b>5</b> удобно перемножить:<br><b>2 · 5 = 10</b><br>Теперь умножим на оставшееся число:<br><b>10 · ${b} = ${ans}</b>`
+      };
+    }
+    if (mode === 'smart_4_25') {
+      const b = rnd(2, 4);
+      let parts = [4, b, 25];
+      if (Math.random() > 0.5) { [parts[0], parts[2]] = [parts[2], parts[0]]; }
+      const ans = 4 * b * 25;
+      return {
+        type: 'simple', text: `${parts[0]} · ${parts[1]} · ${parts[2]} = ?`, ans: ans,
+        rule: `<b>Применим переместительное и сочетательное свойства!</b><br>Заметим, что <b>4</b> и <b>25</b> удобно перемножить:<br><b>4 · 25 = 100</b><br>Теперь умножим на оставшееся число:<br><b>100 · ${b} = ${ans}</b>`
+      };
+    }
+    if (mode === 'smart_dist') {
+      const a = rnd(3, 9);
+      const b = rnd(12, 39);
+      const tens = Math.floor(b / 10) * 10;
+      const units = b % 10;
+      const ans = a * b;
+      return {
+        type: 'simple', text: `${a} · ${b} = ?`, ans: ans,
+        rule: `<b>Применим распределительное свойство!</b><br>Представим ${b} как сумму десятков и единиц:<br><b>${a} · (${tens} + ${units}) = ${a} · ${tens} + ${a} · ${units}</b><br><b>${a * tens} + ${a * units} = ${ans}</b>`
+      };
+    }
+  },
+
+  word_complex: () => {
+    const scenarios = [
+      {
+        text: `В типографии печатают <b>150</b> книг в день. Сколько книг напечатают за <b>24</b> дня?`,
+        steps: [ { expr: "150 * 24", res: 3600 } ],
+        final: 3600, rule: "Общее количество = книг за день (150) · число дней (24)."
+      },
+      {
+        text: `Фермер собрал <b>105</b> мешков картофеля, по <b>120</b> кг в каждом. Сколько всего килограммов картофеля собрал фермер?`,
+        steps: [ { expr: "105 * 120", res: 12600 } ],
+        final: 12600, rule: "Общая масса = масса одного мешка (120) · количество мешков (105). Придётся решать в столбик!"
+      },
+      {
+        text: `Школьная библиотека закупила <b>150</b> учебников математики по <b>45</b> рублей и <b>120</b> учебников истории по <b>60</b> рублей. Сколько всего рублей потратили на учебники?`,
+        steps: [ { expr: "150 * 45", res: 6750 }, { expr: "120 * 60", res: 7200 }, { expr: "6750 + 7200", res: 13950 } ],
+        final: 13950, rule: "Шаг 1: стоимость математики. Шаг 2: стоимость истории. Шаг 3: общая сумма."
+      },
+      {
+        text: `На складе было <b>5000</b> кг сахара. Привезли ещё <b>24</b> мешка по <b>150</b> кг. Сколько килограммов сахара стало на складе?`,
+        steps: [ { expr: "24 * 150", res: 3600 }, { expr: "5000 + 3600", res: 8600 } ],
+        final: 8600, rule: "Шаг 1: сколько привезли (умножение). Шаг 2: прибавляем к тому, что было."
+      }
+    ];
+    const t = scenarios[rnd(0, scenarios.length-1)];
+    return { type: 'complex', text: t.text, steps: t.steps, ans: t.final, rule: t.rule };
+  }
+};
+
+/* ================================================================
+   4. ЛОГИКА ИНТЕРФЕЙСА
+   ================================================================ */
+document.querySelectorAll('.menu-card').forEach(card => {
+  card.addEventListener('click', () => {
+    currentMode = card.dataset.mode;
+    $('menuScreen').classList.add('hidden');
+    $('taskScreen').classList.remove('hidden');
+    
+    const titles = {
+      mult_10: 'Таблица умножения', mult_100: 'Умножение до 100', mult_1000: 'Умножение до 1000',
+      mult_mix: 'Микс', props: 'Свойства умножения', word_complex: 'Задачи в несколько действий'
+    };
+    $('headerTitle').textContent = titles[currentMode];
+    newTask();
+  });
+});
+
+$('backToMenuBtn').addEventListener('click', () => {
+  $('taskScreen').classList.add('hidden');
+  $('menuScreen').classList.remove('hidden');
+});
+
+function newTask(){
+  current = Generators[currentMode]();
+  
+  fbEl.textContent = ''; fbEl.className = 'feedback';
+  stepsPanel.classList.add('hidden'); stepsList.innerHTML = '';
+  gridInputs = { steps: [], ans: [] };
+  
+  simpleInputBlock.classList.add('hidden');
+  columnInputBlock.classList.add('hidden');
+  complexInputBlock.classList.add('hidden');
+
+  if (current.type === 'simple') {
+    taskEl.className = 'task-text';
+    taskEl.innerHTML = current.text;
+    simpleInputBlock.classList.remove('hidden');
+    answerInput.value = ''; answerInput.disabled = false;
+    answerInput.focus();
+  } 
+  else if (current.type === 'column_sequence') {
+    taskEl.className = 'task-text word';
+    taskEl.innerHTML = `Реши в столбик по шагам:`;
+    
+    columnInputBlock.classList.remove('hidden');
+    buildColumnGrid();
+  } 
+  else {
+    taskEl.className = 'task-text word';
+    taskEl.innerHTML = current.text;
+    complexInputBlock.classList.remove('hidden');
+    
+    complexStepsContainer.innerHTML = '';
+    current.steps.forEach((step, i) => {
+      const row = document.createElement('div');
+      row.className = 'step-row';
+      row.innerHTML = `
+        <span class="step-num">Действие ${i+1}:</span>
+        <input type="text" class="expr-input" placeholder="напр. 5 * 12">
+        <span>=</span>
+        <input type="number" class="res-input" placeholder="?">
+      `;
+      complexStepsContainer.appendChild(row);
+    });
+    finalAnswerInput.value = ''; finalAnswerInput.disabled = false;
+    document.querySelector('.expr-input').focus();
+  }
+  
+  $('checkBtn').disabled = false; $('newBtn').disabled = false; $('solveBtn').disabled = false;
+}
+
+/* ================================================================
+   5. ПОСТРОЕНИЕ СЕТКИ СТОЛБИКА
+   ================================================================ */
+function buildColumnGrid() {
+  const grid = $('columnGrid');
+  grid.innerHTML = '';
+  
+  // Вычисляем нужное количество колонок
+  const maxLen = Math.max(
+    current.aStr.length,
+    current.bStr.length,
+    current.ansStr.length,
+    ...current.steps.map(s => s.str.length + s.shift)
+  );
+  const cols = maxLen + 1; // +1 запас для знака умножения
+  
+  grid.style.gridTemplateColumns = `repeat(${cols}, clamp(32px, 7vw, 44px))`;
+  
+  // Функция добавления ячейки
+  const addCell = (content, isInput = false, isStatic = false, type = 'step', stepIndex = -1) => {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    if (isStatic) {
+      cell.textContent = content;
+    } else if (isInput) {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.maxLength = 1;
+      inp.inputMode = 'numeric';
+      // Автопереход фокуса вправо
+      inp.addEventListener('input', function() {
+        if (this.value.length === 1) {
+          const allInputs = Array.from(grid.querySelectorAll('input'));
+          const idx = allInputs.indexOf(this);
+          if (idx < allInputs.length - 1) allInputs[idx + 1].focus();
+        }
+      });
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && this.value === '') {
+          const allInputs = Array.from(grid.querySelectorAll('input'));
+          const idx = allInputs.indexOf(this);
+          if (idx > 0) allInputs[idx - 1].focus();
+        }
+      });
+      
+      cell.appendChild(inp);
+      if (type === 'step') gridInputs.steps[stepIndex].push(inp);
+      else if (type === 'ans') gridInputs.ans.push(inp);
+    }
+    grid.appendChild(cell);
+  };
+
+  // 1. Ряд A
+  for (let i = 0; i < cols; i++) {
+    let strIdx = i - (cols - current.aStr.length);
+    addCell(strIdx >= 0 ? current.aStr[strIdx] : '', false, true);
+  }
+
+  // 2. Ряд B
+  for (let i = 0; i < cols; i++) {
+    let strIdx = i - (cols - current.bStr.length);
+    if (i === cols - current.bStr.length - 1) {
+      addCell('×', false, true);
+    } else if (strIdx >= 0) {
+      addCell(current.bStr[strIdx], false, true);
+    } else {
+      addCell('', false, true);
+    }
+  }
+
+  // 3. Линия
+  for (let i = 0; i < cols; i++) {
+    const line = document.createElement('div');
+    line.className = 'grid-line';
+    grid.appendChild(line);
+  }
+
+  // 4. Промежуточные результаты
+  current.steps.forEach((step, stepIndex) => {
+    gridInputs.steps[stepIndex] = [];
+    const targetCol = cols - 1 - step.shift;
+    const startCol = targetCol - (step.str.length - 1);
+    
+    for (let i = 0; i < cols; i++) {
+      if (i >= startCol && i <= targetCol) {
+        addCell('', true, false, 'step', stepIndex); // Цифры результата
+      } else if (i > targetCol) {
+        addCell('', true, false, 'step', stepIndex); // Нули от сдвига
+      } else {
+        addCell('', false, true);
+      }
+    }
+  });
+
+  // 5. Линия
+  for (let i = 0; i < cols; i++) {
+    const line = document.createElement('div');
+    line.className = 'grid-line';
+    grid.appendChild(line);
+  }
+
+  // 6. Итоговый ответ
+  for (let i = 0; i < cols; i++) {
+    let strIdx = i - (cols - current.ansStr.length);
+    if (strIdx >= 0) {
+      addCell('', true, false, 'ans');
+    } else {
+      addCell('', false, true);
+    }
+  }
+  
+  // Фокус на первый инпут
+  const firstInput = grid.querySelector('input');
+  if (firstInput) firstInput.focus();
+}
+
+/* ================================================================
+   6. ПРОВЕРКА ОТВЕТА
+   ================================================================ */
+async function checkAnswer(){
+  if (!current) return;
+  let isCorrect = false;
+  let userAnswerStr = "";
+
+  if (current.type === 'simple') {
+    const val = answerInput.value.trim();
+    if (val === '') return;
+    const num = parseInt(val, 10);
+    userAnswerStr = num;
+    isCorrect = (num === current.ans);
+  } 
+  else if (current.type === 'column_sequence') {
+    isCorrect = true;
+    // Проверяем промежуточные шаги
+    current.steps.forEach((step, stepIndex) => {
+      const expectedPadded = '0'.repeat(step.shift) + step.str;
+      const userInputs = gridInputs.steps[stepIndex];
+      let userStr = userInputs.map(inp => inp.value || ' ').join('').trim();
+      
+      // Убираем ведущие пробелы для сравнения (если пустые ячейки слева)
+      // Но лучше сравнивать посимвольно с конца.
+      let isStepOk = true;
+      for (let i = 0; i < userInputs.length; i++) {
+        const expectedChar = expectedPadded[expectedPadded.length - 1 - i] || '';
+        const userChar = userInputs[userInputs.length - 1 - i].value;
+        if (expectedChar !== userChar) {
+          isStepOk = false;
+          userInputs[userInputs.length - 1 - i].classList.add('wrong-border');
+        } else {
+          userInputs[userInputs.length - 1 - i].classList.remove('wrong-border');
+        }
+      }
+      if (!isStepOk) isCorrect = false;
+    });
+
+    // Проверяем финальный ответ
+    let ansStr = gridInputs.ans.map(inp => inp.value || ' ').join('').trim();
+    if (parseInt(ansStr, 10) !== current.ans) {
+      isCorrect = false;
+      gridInputs.ans.forEach(inp => inp.classList.add('wrong-border'));
+    } else {
+      gridInputs.ans.forEach(inp => inp.classList.remove('wrong-border'));
+    }
+    
+    userAnswerStr = ansStr;
+  } 
+  else {
+    const rows = complexStepsContainer.querySelectorAll('.step-row');
+    let allStepsOk = true;
+    
+    rows.forEach((row, i) => {
+      const exprVal = row.querySelector('.expr-input').value;
+      const resVal = row.querySelector('.res-input').value;
+      const expectedStep = current.steps[i];
+      const evaluatedExpr = evaluateExpr(exprVal);
+      
+      if (evaluatedExpr !== expectedStep.res || parseInt(resVal, 10) !== expectedStep.res) {
+        allStepsOk = false;
+        row.querySelector('.expr-input').classList.add('shake');
+        row.querySelector('.res-input').classList.add('shake');
+        setTimeout(() => {
+          row.querySelector('.expr-input').classList.remove('shake');
+          row.querySelector('.res-input').classList.remove('shake');
+        }, 450);
+      }
+    });
+
+    const finalVal = parseInt(finalAnswerInput.value, 10);
+    userAnswerStr = finalVal;
+    isCorrect = allStepsOk && (finalVal === current.ans);
+  }
+
+  if (isCorrect){
+    streak++; score += 10;
+    fbEl.textContent = PRAISE[rnd(0, PRAISE.length-1)];
+    fbEl.className = 'feedback ok';
+    showToast('Верно! ✨');
+    burstConfetti();
+    magicSound();
+    
+    if (Store.mode === 'cloud' && studentNick !== 'Ученик') {
+      Store.saveAttempt({
+        nick: studentNick, timestamp: Date.now(), 
+        equation: `${current.a} * ${current.b}` || 'Задание', type: currentMode,
+        subject: 'multiplication', correct: true, answer: userAnswerStr, correctAnswer: current.ans
+      });
+    }
+    
+    disableAllInputs();
+    $('checkBtn').disabled = true;
+    
+    renderSteps();
+    setTimeout(newTask, 3000);
+  } else {
+    streak = 0;
+    fbEl.textContent = 'Почти получилось! Проверь свои расчёты ✨';
+    fbEl.className = 'feedback bad';
+    
+    if (Store.mode === 'cloud' && studentNick !== 'Ученик') {
+      Store.saveAttempt({
+        nick: studentNick, timestamp: Date.now(), 
+        equation: `${current.a} * ${current.b}` || 'Задание', type: currentMode,
+        subject: 'multiplication', correct: false, answer: userAnswerStr, correctAnswer: current.ans
+      });
+    }
+  }
+  updateStats();
+}
+
+function disableAllInputs() {
+  if (current.type === 'simple') answerInput.disabled = true;
+  else if (current.type === 'column_sequence') {
+    $('columnGrid').querySelectorAll('input').forEach(inp => { inp.disabled = true; inp.classList.remove('wrong-border'); });
+  }
+  else {
+    finalAnswerInput.disabled = true;
+    complexStepsContainer.querySelectorAll('input').forEach(inp => inp.disabled = true);
+  }
+}
+
+// Безопасный калькулятор
+function evaluateExpr(str) {
+  if (!str) return null;
+  let clean = str.replace(/[·xX]/g, '*').replace(/[:÷]/g, '/').replace(/\s+/g, '');
+  if (!/^[\d\+\-\*\/\(\)]+$/.test(clean)) return null;
+  try { return Function('"use strict";return (' + clean + ')')(); } 
+  catch(e) { return null; }
+}
+
+/* ================================================================
+   7. РАЗБОР (ПРАВИЛА)
+   ================================================================ */
+function renderSteps(){
+  stepsList.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'step-card';
+  
+  let html = `<div class="rule">${current.rule}</div>`;
+  
+  if (current.type === 'complex') {
+    html += `<div style="margin-top:16px; border-top:1px dashed rgba(255,255,255,.1); padding-top:12px;">`;
+    current.steps.forEach((s, i) => {
+      html += `<div style="text-align:center; font-size:16px; margin-bottom:6px; color:#ffe8b0;">
+        Действие ${i+1}: <b>${s.expr.replace('*', ' · ')} = ${s.res}</b>
+      </div>`;
+    });
+    html += `<div style="text-align:center; font-size:18px; margin-top:10px; color:#a6ff4d; font-weight:900;">Ответ: ${current.ans}</div>`;
+    html += `</div>`;
+  } 
+  else if (current.type === 'column_sequence') {
+    let colHtml = `<div style="text-align:right; font-family:monospace; font-size:24px; font-weight:900; line-height:1.3; color:#c9bcef;">`;
+    colHtml += `<div>${current.aStr}</div>`;
+    colHtml += `<div>× ${current.bStr}</div>`;
+    colHtml += `<div style="border-bottom:2px solid #ffcf5c; margin:4px 0;"></div>`;
+    
+    current.steps.forEach(step => {
+      const padded = step.str + '0'.repeat(step.shift);
+      colHtml += `<div>${padded}</div>`;
+    });
+    
+    colHtml += `<div style="border-bottom:2px solid #ffcf5c; margin:4px 0;"></div>`;
+    colHtml += `<div style="color:#a6ff4d;">${current.ansStr}</div>`;
+    colHtml += `</div>`;
+    
+    html += `<div style="margin-top:16px; text-align:center;">${colHtml}</div>`;
+  } 
+  else {
+    html += `<div style="text-align:center; font-size:18px; margin-top:10px; color:#a6ff4d; font-weight:900;">Ответ: ${current.ans}</div>`;
+  }
+  
+  card.innerHTML = html;
+  stepsList.appendChild(card);
+  stepsPanel.classList.remove('hidden');
+}
+
+function updateStats(){
+  $('streak').textContent = streak;
+  $('score').textContent = score;
+}
+
+/* ================================================================
+   8. ЭФФЕКТЫ
+   ================================================================ */
+function showToast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t); showToast._t = setTimeout(() => t.classList.remove('show'), 2000);
+}
+function burstConfetti(){
+  if (typeof confetti !== 'function') return;
+  confetti({ particleCount: 80, spread: 70, origin: {y: .65}, colors: ['#ffcf5c','#2ee6d6','#ff4fd8'] });
+}
+function magicSound(){
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC(), now = ctx.currentTime;
+    [660, 880].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, now + i*0.1);
+      g.gain.linearRampToValueAtTime(0.1, now + i*0.1 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i*0.1 + 0.25);
+      o.connect(g); g.connect(ctx.destination); o.start(now + i*0.1); o.stop(now + i*0.1 + 0.3);
+    });
+    setTimeout(() => ctx.close(), 800);
+  } catch(e){}
+}
+
+/* ================================================================
+   9. СОБЫТИЯ
+   ================================================================ */
+$('checkBtn').addEventListener('click', checkAnswer);
+answerInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); });
+finalAnswerInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); });
+$('newBtn').addEventListener('click', newTask);
+$('solveBtn').addEventListener('click', () => {
+  if (!current) return;
+  renderSteps();
+  disableAllInputs();
+  $('checkBtn').disabled = true; $('solveBtn').disabled = true;
+});
+
+// СТАРТ
+(async function init(){
+  await Store.init();
+  updateStats();
+})();
+</script>
+</body>
+</html>
