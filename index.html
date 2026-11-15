@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Магическая академия</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; font-family:'Nunito',sans-serif; color:#e9e4ff;
+  background:
+    radial-gradient(1100px 750px at 50% -12%, #4a2385 0%, rgba(74,35,133,0) 62%),
+    radial-gradient(900px 700px at 92% 12%, #123a5e 0%, rgba(18,58,94,0) 60%),
+    radial-gradient(800px 800px at 6% 85%, #3a0f52 0%, rgba(58,15,82,0) 60%),
+    linear-gradient(170deg, #12072b 0%, #1a0b3d 35%, #0d1030 70%, #05030f 100%);
+  background-attachment:fixed; display:flex; flex-direction:column; align-items:center;
+}
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 6px 1px rgba(255,255,255,.85);animation:twinkle 3s infinite ease-in-out;opacity:.7}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+
+.wrapper{position:relative; z-index:2; width:100%; max-width:880px; padding:40px 20px; text-align:center; animation:fadeIn 0.8s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+h1{
+  font-family:'Cinzel',serif; font-weight:900; font-size:clamp(26px,6vw,48px); margin:0 0 10px;
+  background:linear-gradient(100deg,#ffd76a,#fff3c4 35%,#ffcf5c 55%,#e0a3ff 80%,#2ee6d6);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 0 18px rgba(255,207,92,.35));
+}
+.subtitle{color:#b9a9e8; font-size:clamp(14px,3vw,18px); font-weight:700; margin-bottom:30px}
+
+/* Экран ввода имени */
+#loginBox{background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,207,92,0.4); border-radius:24px; padding:30px; max-width:400px; margin:0 auto; backdrop-filter:blur(10px)}
+#nickInput{width:100%; padding:15px; font-family:'Nunito'; font-size:18px; font-weight:800; text-align:center; color:#fff; background:rgba(10,6,28,0.7); border:2px solid rgba(160,130,255,0.5); border-radius:16px; outline:none; margin-bottom:15px; transition:0.2s}
+#nickInput:focus{border-color:#ffcf5c; box-shadow:0 0 20px rgba(255,207,92,0.3)}
+.btn{font-family:'Nunito'; font-weight:900; font-size:16px; padding:14px 24px; border-radius:16px; cursor:pointer; border:none; background:linear-gradient(135deg,#ffcf5c,#ffa63c 55%,#ff7ad9); color:#2b1700; box-shadow:0 8px 20px rgba(0,0,0,0.3); transition:0.2s; width:100%}
+.btn:hover{transform:translateY(-2px); box-shadow:0 10px 25px rgba(255,190,90,0.5)}
+
+/* Двери (карточки) */
+#doorsBox{display:none; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:24px; margin-top:20px}
+.door{
+  background:linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  border:2px solid rgba(160,130,255,0.3); border-radius:24px; padding:40px 20px;
+  text-decoration:none; color:#fff; transition:0.3s; position:relative; overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,0.4); display:flex; flex-direction:column; align-items:center;
+}
+.door:hover{transform:translateY(-8px) scale(1.02); border-color:#ffcf5c; box-shadow:0 15px 40px rgba(255,207,92,0.3)}
+.door::before{content:''; position:absolute; top:0; left:0; width:100%; height:100%; background:radial-gradient(circle at top right, rgba(255,207,92,0.15), transparent 60%); opacity:0; transition:0.3s}
+.door:hover::before{opacity:1}
+.door-icon{font-size:64px; margin-bottom:20px; filter:drop-shadow(0 0 15px rgba(255,255,255,0.5)); transition:0.3s}
+.door:hover .door-icon{transform:scale(1.1) rotate(5deg)}
+.door h2{font-family:'Cinzel',serif; font-size:24px; margin:0 0 10px; color:#ffe8b0}
+.door p{font-size:15px; color:#b9a9e8; font-weight:700; margin:0; line-height:1.5}
+
+.user-info{display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:20px; font-size:14px; font-weight:800; color:#a99bd6}
+.user-info span{color:#ffcf5c}
+.logout-btn{background:none; border:1px solid rgba(255,255,255,0.2); color:#e8dfff; padding:5px 12px; border-radius:8px; cursor:pointer; font-family:'Nunito'; font-weight:700; font-size:12px; transition:0.2s}
+.logout-btn:hover{border-color:#ffcf5c; color:#ffcf5c}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<div class="wrapper">
+  <h1>Магическая академия</h1>
+  <p class="subtitle">Выбери свой путь, юный маг!</p>
+
+  <!-- Блок ввода имени -->
+  <div id="loginBox">
+    <input type="text" id="nickInput" placeholder="Введи своё имя (ник)" maxlength="20" autocomplete="off">
+    <button class="btn" id="startBtn">✨ Войти в академию</button>
+    <p style="font-size:12px; color:#ff9ec4; min-height:16px; margin:10px 0 0;" id="errorMsg"></p>
+  </div>
+
+  <!-- Блок с дверями -->
+  <div id="doorsBox">
+    <div class="user-info">
+      <div>🧙 Ты вошёл как: <span id="nickDisplay"></span></div>
+      <button class="logout-btn" id="logoutBtn">Выйти</button>
+    </div>
+    
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px;">
+      <!-- Дверь 1 -->
+      <a href="equations.html" class="door">
+        <div class="door-icon">⚖️</div>
+        <h2>Зал Уравнений</h2>
+        <p>Найди неизвестное X. Решай уравнения, раскрывай скобки и применяй правила.</p>
+      </a>
+
+      <!-- Дверь 2 -->
+      <a href="multiplication.html" class="door">
+        <div class="door-icon">🧮</div>
+        <h2>Зал Умножения</h2>
+        <p>Умножай в столбик, решай задачи и изучай магические свойства чисел.</p>
+      </a>
+    </div>
+    
+    <div style="margin-top:30px; font-size:13px; color:#8b7fbd;">
+      Учитель? Панель управления находится в Зале Уравнений.
+    </div>
+  </div>
+</div>
+
+<script>
+// Звёзды
+(function(){
+  const box = document.getElementById('stars');
+  for(let i=0; i<100; i++){
+    const s = document.createElement('div'); s.className = 'star';
+    s.style.width = s.style.height = (1+Math.random()*2.5)+'px';
+    s.style.left = (Math.random()*100)+'%'; s.style.top = (Math.random()*100)+'%';
+    s.style.animationDelay = (Math.random()*5)+'s';
+    box.appendChild(s);
+  }
+})();
+
+const loginBox = document.getElementById('loginBox');
+const doorsBox = document.getElementById('doorsBox');
+const nickInput = document.getElementById('nickInput');
+const nickDisplay = document.getElementById('nickDisplay');
+const errorMsg = document.getElementById('errorMsg');
+
+// Проверка, сохранено ли имя
+let savedNick = localStorage.getItem('magic_nick');
+
+function showDoors() {
+  loginBox.style.display = 'none';
+  doorsBox.style.display = 'block';
+  nickDisplay.textContent = savedNick;
+}
+
+if (savedNick) {
+  showDoors();
+}
+
+// Вход
+document.getElementById('startBtn').addEventListener('click', () => {
+  const val = nickInput.value.trim();
+  if (val.length < 2) {
+    errorMsg.textContent = 'Имя должно быть не короче 2 символов';
+    return;
+  }
+  savedNick = val;
+  localStorage.setItem('magic_nick', savedNick);
+  showDoors();
+});
+
+nickInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('startBtn').click();
+});
+
+// Выход
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('magic_nick');
+  savedNick = null;
+  loginBox.style.display = 'block';
+  doorsBox.style.display = 'none';
+  nickInput.value = '';
+  errorMsg.textContent = '';
+});
+</script>
+</body>
+</html>
