@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -308,16 +308,16 @@ footer{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;jus
 
 <script>
 /* ================================================================
-   1. КОНФИГ FIREBASE (ВСТАВЬТЕ СВОИ ЗНАЧЕНИЯ)
+   1. КОНФИГ FIREBASE
    ================================================================ */
 const firebaseConfig = {
-  apiKey: "AIzaSyBGh2kpBOAGsRLXR5Q9BrKS-D7h6MSJW1I",
-  authDomain: "the-lira-of-numbers.firebaseapp.com",
-  databaseURL: "https://the-lira-of-numbers-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "the-lira-of-numbers",
-  storageBucket: "the-lira-of-numbers.firebasestorage.app",
-  messagingSenderId: "36953413924",
-  appId: "1:36953413924:web:a4cee66e51079ca04b3bb1"
+  apiKey:            "ВАШ_API_KEY",
+  authDomain:        "ВАШ_PROJECT.firebaseapp.com",
+  databaseURL:       "https://ВАШ_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "ВАШ_PROJECT",
+  storageBucket:     "ВАШ_PROJECT.appspot.com",
+  messagingSenderId: "ВАШ_SENDER_ID",
+  appId:             "ВАШ_APP_ID"
 };
 const CFG_OK = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("ВАШ_");
 
@@ -357,7 +357,7 @@ let current = null;
 let currentMode = 'mult_10';
 let streak = 0, score = 0;
 let studentNick = localStorage.getItem('magic_nick') || 'Ученик';
-let gridInputs = { steps: [], ans: [] }; // Для сбора данных из сетки
+let gridInputs = { steps: [], ans: [] };
 
 const $ = id => document.getElementById(id);
 const taskEl = $('taskText'), badgeEl = $('typeBadge'), fbEl = $('feedback'),
@@ -538,7 +538,7 @@ function newTask(){
   } 
   else if (current.type === 'column_sequence') {
     taskEl.className = 'task-text word';
-    taskEl.innerHTML = `Реши в столбик по шагам:`;
+    taskEl.innerHTML = `Реши в столбик по шагам (ввод справа налево):`;
     
     columnInputBlock.classList.remove('hidden');
     buildColumnGrid();
@@ -568,25 +568,26 @@ function newTask(){
 }
 
 /* ================================================================
-   5. ПОСТРОЕНИЕ СЕТКИ СТОЛБИКА
+   5. ПОСТРОЕНИЕ СЕТКИ СТОЛБИКА (СПРАВА НАЛЕВО)
    ================================================================ */
 function buildColumnGrid() {
   const grid = $('columnGrid');
   grid.innerHTML = '';
   
-  // Вычисляем нужное количество колонок
   const maxLen = Math.max(
     current.aStr.length,
     current.bStr.length,
     current.ansStr.length,
     ...current.steps.map(s => s.str.length + s.shift)
   );
-  const cols = maxLen + 1; // +1 запас для знака умножения
+  const cols = maxLen + 1; 
   
   grid.style.gridTemplateColumns = `repeat(${cols}, clamp(32px, 7vw, 44px))`;
   
-  // Функция добавления ячейки
-  const addCell = (content, isInput = false, isStatic = false, type = 'step', stepIndex = -1) => {
+  const stepInputs = []; 
+  let ansInputs = [];
+
+  const addCell = (content, isInput = false, isStatic = false, type = 'step', stepIndex = -1, rowInputs = null) => {
     const cell = document.createElement('div');
     cell.className = 'grid-cell';
     if (isStatic) {
@@ -596,25 +597,16 @@ function buildColumnGrid() {
       inp.type = 'text';
       inp.maxLength = 1;
       inp.inputMode = 'numeric';
-      // Автопереход фокуса вправо
-      inp.addEventListener('input', function() {
-        if (this.value.length === 1) {
-          const allInputs = Array.from(grid.querySelectorAll('input'));
-          const idx = allInputs.indexOf(this);
-          if (idx < allInputs.length - 1) allInputs[idx + 1].focus();
-        }
-      });
-      inp.addEventListener('keydown', function(e) {
-        if (e.key === 'Backspace' && this.value === '') {
-          const allInputs = Array.from(grid.querySelectorAll('input'));
-          const idx = allInputs.indexOf(this);
-          if (idx > 0) allInputs[idx - 1].focus();
-        }
-      });
-      
       cell.appendChild(inp);
-      if (type === 'step') gridInputs.steps[stepIndex].push(inp);
-      else if (type === 'ans') gridInputs.ans.push(inp);
+      
+      if (type === 'step') {
+          rowInputs.push(inp);
+          if (!gridInputs.steps[stepIndex]) gridInputs.steps[stepIndex] = [];
+          gridInputs.steps[stepIndex].push(inp);
+      } else if (type === 'ans') {
+          ansInputs.push(inp);
+          gridInputs.ans.push(inp);
+      }
     }
     grid.appendChild(cell);
   };
@@ -644,17 +636,18 @@ function buildColumnGrid() {
     grid.appendChild(line);
   }
 
-  // 4. Промежуточные результаты
+  // 4. Промежуточные результаты (без лишних нулей, только точные цифры)
   current.steps.forEach((step, stepIndex) => {
-    gridInputs.steps[stepIndex] = [];
-    const targetCol = cols - 1 - step.shift;
-    const startCol = targetCol - (step.str.length - 1);
+    let rowInputs = [];
+    stepInputs.push(rowInputs);
+    
+    const strLen = step.str.length;
+    const endCol = cols - 1 - step.shift;
+    const startCol = endCol - strLen + 1;
     
     for (let i = 0; i < cols; i++) {
-      if (i >= startCol && i <= targetCol) {
-        addCell('', true, false, 'step', stepIndex); // Цифры результата
-      } else if (i > targetCol) {
-        addCell('', true, false, 'step', stepIndex); // Нули от сдвига
+      if (i >= startCol && i <= endCol) {
+        addCell('', true, false, 'step', stepIndex, rowInputs); 
       } else {
         addCell('', false, true);
       }
@@ -672,15 +665,48 @@ function buildColumnGrid() {
   for (let i = 0; i < cols; i++) {
     let strIdx = i - (cols - current.ansStr.length);
     if (strIdx >= 0) {
-      addCell('', true, false, 'ans');
+      addCell('', true, false, 'ans', -1, null);
     } else {
       addCell('', false, true);
     }
   }
+
+  // --- НОВАЯ ЛОГИКА ФОКУСА (СПРАВА НАЛЕВО) ---
+  const typingOrder = [];
   
-  // Фокус на первый инпут
-  const firstInput = grid.querySelector('input');
-  if (firstInput) firstInput.focus();
+  // Сначала собираем все строки умножения (справа налево)
+  stepInputs.forEach(row => {
+      for (let i = row.length - 1; i >= 0; i--) {
+          typingOrder.push(row[i]);
+      }
+  });
+  
+  // Затем строку с финальным ответом (тоже справа налево)
+  for (let i = ansInputs.length - 1; i >= 0; i--) {
+      typingOrder.push(ansInputs[i]);
+  }
+
+  // Вешаем события
+  typingOrder.forEach((inp, index) => {
+      inp.addEventListener('input', function() {
+          if (this.value.length === 1) {
+              if (index < typingOrder.length - 1) {
+                  typingOrder[index + 1].focus();
+              }
+          }
+      });
+      inp.addEventListener('keydown', function(e) {
+          if (e.key === 'Backspace' && this.value === '') {
+              if (index > 0) {
+                  typingOrder[index - 1].focus();
+              }
+          }
+      });
+  });
+
+  if (typingOrder.length > 0) {
+      typingOrder[0].focus();
+  }
 }
 
 /* ================================================================
@@ -700,31 +726,29 @@ async function checkAnswer(){
   } 
   else if (current.type === 'column_sequence') {
     isCorrect = true;
-    // Проверяем промежуточные шаги
+    
+    // ПРОВЕРКА ПРОМЕЖУТОЧНЫХ ШАГОВ
     current.steps.forEach((step, stepIndex) => {
-      const expectedPadded = '0'.repeat(step.shift) + step.str;
       const userInputs = gridInputs.steps[stepIndex];
-      let userStr = userInputs.map(inp => inp.value || ' ').join('').trim();
-      
-      // Убираем ведущие пробелы для сравнения (если пустые ячейки слева)
-      // Но лучше сравнивать посимвольно с конца.
       let isStepOk = true;
+      
+      // userInputs.length всегда равно step.str.length в новой логике
       for (let i = 0; i < userInputs.length; i++) {
-        const expectedChar = expectedPadded[expectedPadded.length - 1 - i] || '';
-        const userChar = userInputs[userInputs.length - 1 - i].value;
+        const expectedChar = step.str[i];
+        const userChar = userInputs[i].value;
         if (expectedChar !== userChar) {
           isStepOk = false;
-          userInputs[userInputs.length - 1 - i].classList.add('wrong-border');
+          userInputs[i].classList.add('wrong-border');
         } else {
-          userInputs[userInputs.length - 1 - i].classList.remove('wrong-border');
+          userInputs[i].classList.remove('wrong-border');
         }
       }
       if (!isStepOk) isCorrect = false;
     });
 
-    // Проверяем финальный ответ
-    let ansStr = gridInputs.ans.map(inp => inp.value || ' ').join('').trim();
-    if (parseInt(ansStr, 10) !== current.ans) {
+    // ПРОВЕРКА ИТОГОВОГО ОТВЕТА
+    let ansStr = gridInputs.ans.map(inp => inp.value || '').join('');
+    if (ansStr !== current.ansStr) {
       isCorrect = false;
       gridInputs.ans.forEach(inp => inp.classList.add('wrong-border'));
     } else {
