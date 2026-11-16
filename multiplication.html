@@ -794,7 +794,7 @@ async function checkAnswer(){
     if (Store.mode === 'cloud' && studentNick !== 'Ученик') {
       Store.saveAttempt({
         nick: studentNick, timestamp: Date.now(), 
-        equation: `${current.a} * ${current.b}` || 'Задание', type: currentMode,
+        equation: current.type === 'column_sequence' ? `${current.a} · ${current.b}` : (current.text ? current.text.replace(/<[^>]+>/g, '') : 'Задание'),
         subject: 'multiplication', correct: true, answer: userAnswerStr, correctAnswer: current.ans
       });
     }
@@ -812,7 +812,7 @@ async function checkAnswer(){
     if (Store.mode === 'cloud' && studentNick !== 'Ученик') {
       Store.saveAttempt({
         nick: studentNick, timestamp: Date.now(), 
-        equation: `${current.a} * ${current.b}` || 'Задание', type: currentMode,
+        equation: current.type === 'column_sequence' ? `${current.a} · ${current.b}` : (current.text ? current.text.replace(/<[^>]+>/g, '') : 'Задание'),
         subject: 'multiplication', correct: false, answer: userAnswerStr, correctAnswer: current.ans
       });
     }
